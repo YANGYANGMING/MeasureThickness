@@ -206,7 +206,7 @@ class GenerateDataSetView(View):
                                   }
                               });""" % (item['title'], start_id, end_id, item['title'], item['title'], )
             script += "});"
-                # param_list.append({'time': item['title'], 'start_id': start_id, 'end_id': end_id})
+            # param_list.append({'time': item['title'], 'start_id': start_id, 'end_id': end_id})
             result = {'status': True, 'message': mark_safe(ele), 'script': mark_safe(script)}
 
         return HttpResponse(json.dumps(result))
@@ -219,13 +219,17 @@ def generate_dataset_ajax(request):
     try:
         import time
         result_list = []
-        input_list = json.loads(request.POST.get('input_list'))  #['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
+        input_list = json.loads(request.POST.get('input_list'))  # ['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
         for i in range(0, len(input_list), 3):
             result_list.append(input_list[i: i+3])
-        # print(result_list)  #[['2019-09-20', '5', '7'], ]        range(4,12)   choose(5,7)
-        #取出已选中的数据id
-        choose_dataset_id_list = handledataset.get_selected_data(result_list)    #[5, 6, 7, 20, 21]
-        #存入数据库
+        print(result_list)  # [['2019-09-20', '5', '7'], ]        range(4,12)   choose(5,7)
+        for data_item in result_list:  # 制作数据集时如果没有滑动滑条选取数据，默认选取当前日期的第一条数据
+            if data_item[1] == '' and data_item[2] == '':
+                nid = int(models.DataFile.objects.filter(create_time=data_item[0]).values('nid')[0]['nid'])
+                data_item[1] = data_item[2] = nid
+        # 取出已选中的数据id
+        choose_dataset_id_list = handledataset.get_selected_data(result_list)    # choose_dataset_id_list = [5, 6, 7, 20, 21]
+        # 存入数据库
         if choose_dataset_id_list:
             start = time.time()
             models.DataSetCondition.objects.create(time_and_id=result_list, data_set_id=choose_dataset_id_list)

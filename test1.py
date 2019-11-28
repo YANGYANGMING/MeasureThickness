@@ -166,6 +166,8 @@ b = "2225,2891,4087,1082,0,0,1877,4089,4089,4089,1761,0,0,0,0,4066,4089,4089,408
 #
 # print(ll - lll)
 
-dic = {'status': True, 'data_list': [{'time': '2019-11-15', 'data_id': 4, 'thickness': ''}, {'time': '2019-11-15', 'data_id': 5, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 1, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 2, 'thickness': ''}]}
+# dic = {'status': True, 'data_list': [{'time': '2019-11-15', 'data_id': 4, 'thickness': ''}, {'time': '2019-11-15', 'data_id': 5, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 1, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 2, 'thickness': ''}]}
+#
+# print(json.dumps(dic))
 
-print(json.dumps(dic))
+

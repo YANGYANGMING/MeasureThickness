@@ -11,7 +11,6 @@ class DataFile(models.Model):
     run_alg_thickness = models.FloatField(blank=True, null=True)
     file_name = models.ForeignKey('DataTag', on_delete=models.CASCADE)
 
-
 class DataSetCondition(models.Model):
     """筛选出来的数据集"""
     create_time = models.DateField(auto_now_add=True)
@@ -22,7 +21,7 @@ class DataSetCondition(models.Model):
 class DataTag(models.Model):
     """数据tag"""
     file_name = models.TextField(blank=True, null=True)
-    tag_content = models.TextField(blank=True, null=True)
+    tag_content = models.TextField(blank=True, null=True, default={'file_explain': '', 'img_path': '/static/default-imgs/default.png'})
     md5_val = models.TextField(blank=True, null=True)
 
 
