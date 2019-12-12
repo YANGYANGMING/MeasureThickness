@@ -1,0 +1,171 @@
+{% extends 'index.html' %}
+{% load staticfiles %}
+
+{% block right-content-container %}
+    <div style="padding: 15px; margin-top: -40px" class="layui-anim">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+          <legend>多文件上传列表</legend>
+        </fieldset>
+
+        <div class="layui-upload">
+          <div class="layui-upload-list">
+            <table class="layui-table">
+              <thead id="table_th">
+                <tr>
+                    <th style="width: 5px">操作</th>
+                    <th style="width: 20px">ID</th>
+                    <th style="width: 200px">文件名</th>
+                    <th style="width: 150px">图片</th>
+                    <th>文件描述</th>
+                </tr>
+              </thead>
+              <tbody id="table_tb">
+                {% for item in file_tag_obj %}
+                    <tr>
+                        <td><button type="button" class="layui-btn" onclick="bindEditMode(this)">编辑</button></td>
+                        <td>{{ item.id }}</td>
+                        <td><a href="{% url 'single_file_data' item.id %}">{{ item.file_name }}</a></td>
+                        <td edit-enable="true" edit-type="file" id="show-img-{{ item.id }}"><img src="{{ item.img_path }}" onclick="ShowBigImage(this)"></td>
+                        <td edit-enable="true" edit-type="input">{{ item.file_explain }}</td>
+                    </tr>
+                {% endfor %}
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+    </div>
+
+    <script>
+
+        function bindEditMode(ths){
+                var editing = $(ths).hasClass('layui-btn-warm');
+                {#console.log(editing);#}
+                var $currentTr = $(ths).parent().parent();
+                if(editing){
+                    //退出编辑模式
+                    $(ths).removeClass('layui-btn-warm');
+                    $(ths).text('编辑');
+                    trOutEditMode($currentTr);
+
+                 }else{
+                    //进入编辑模式
+                    $(ths).addClass('layui-btn-warm');
+                    $(ths).text('保存');
+                    //console.log($currentTr);
+                    trIntoEditMode($currentTr);
+
+                 }
+            }
+
+         function trIntoEditMode($tr){
+            //进入编辑
+            $tr.addClass('success');
+            var nid = $tr.children().eq(1).html();
+            //console.log(nid);
+            $tr.children().each(function () {
+                //$(this) = td
+                var editEnable = $(this).attr('edit-enable');
+                var editType = $(this).attr('edit-Type');
+                if(editEnable === 'true'){
+                    if(editType === 'input'){
+                        //文本框
+                        var innerText = $(this).text();
+                        var input = document.createElement('input');
+                        input.className = 'layui-input';
+                        input.value = innerText;
+                        $(this).html(input);
+
+                    }else if(editType === 'file'){
+                        //图片
+                        var img = document.createElement('input');
+                        img.type = 'file';
+                        img.id = "img-" + nid;
+                        $(this).html(img)
+                    }
+                }
+            })
+        }
+
+        function trOutEditMode($tr){
+            //退出编辑并保存
+
+            $tr.removeClass('success');
+            var nid = $tr.children().eq(1).html();
+            var fd = new FormData();
+            fd.append('nid', nid);
+            $tr.children().each(function () {
+                //$(this) = td
+                var editEnable = $(this).attr('edit-enable');
+                var editType = $(this).attr('edit-Type');
+                if(editEnable === 'true'){
+                    if(editType === 'input'){
+                        var $input = $(this).children().first();
+                        var inputValue = $input.val();
+                        $(this).html(inputValue);
+                        fd.append('inputValue', inputValue);
+                    }else if(editType === 'file'){
+                        var img_obj = $('#img-'+ nid)[0].files[0];
+                        fd.append('img_obj', img_obj)
+                    }
+                }
+            });
+            //console.log(fd);
+                $.ajax({
+                    url:'/thickness/tag-manage/',
+                    dataType:'JSON',
+                    type:'POST',
+                    data: fd,
+                    processData : false, // 使数据不做处理
+                    contentType : false, // 不要设置Content-Type请求头
+                    success: function(arg){
+                        if(arg.status){
+                            $tr.children().each(function () {
+                                //$(this) = td
+                                var editEnable = $(this).attr('edit-enable');
+                                var editType = $(this).attr('edit-Type');
+                                if(editEnable === 'true'){
+                                    if(editType === 'file'){
+                                        //图片
+                                        var img = document.createElement('img');
+                                        img.src = arg.message;
+                                        $(this).html(img)
+                                    }
+                                }
+                            })
+                        }
+                }
+            });
+        }
+
+        function ShowBigImage(ths) {
+                 var id = $(ths).parent().attr('id');
+                 //console.log(id);
+                 layer.photos({
+                     photos: '#' + id,
+                     shadeClose: true,
+                     closeBtn: 2,
+                     anim: 0
+                 });
+            }
+
+
+
+
+    </script>
+
+
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

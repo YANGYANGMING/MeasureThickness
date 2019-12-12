@@ -1,0 +1,49 @@
+{% extends 'index.html' %}
+{% load staticfiles %}
+
+{% block right-content-container %}
+    <div style="padding: 15px; margin-top: -20px" class="layui-anim">
+         <fieldset class="layui-elem-field layui-field-title">
+            <legend>修改密码</legend>
+        </fieldset>
+        <form action="" method="POST" class="layui-form " id="change-pwd" style="width: 500px">{% csrf_token %}
+        <div class="layui-form-item">
+            <label class="layui-form-label">旧密码</label>
+            <div class="layui-input-block">
+                {{ form.old_pwd }}
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">新密码</label>
+            <div class="layui-input-block">
+                {{ form.new_pwd }}
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label" style="width: 80px">重复新密码</label>
+            <div class="layui-input-block">
+                {{ form.new_pwd_confirm }}
+            </div>
+        </div>
+        <div class="layui-form-item"><div class="layui-input-block">
+            <button lay-submit="" lay-filter="submit" class="layui-btn">立即提交</button>
+            <label id="msg" style="color: red;">{{ result.message }}</label>
+        </div>
+        </div>
+        </form>
+    </div>
+
+
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

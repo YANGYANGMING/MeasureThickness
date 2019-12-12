@@ -1,0 +1,147 @@
+{% extends 'index.html' %}
+{% load staticfiles %}
+
+{% block right-content-container %}
+
+    <div style="padding: 15px; margin-top: -40px" class="layui-anim">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+          <legend>生成数据集</legend>
+        </fieldset>
+
+        <div style="width: 600px; position: absolute">
+            <input type="text" id="data_time_list" style="display: none;" value="{{ data_time_list }}">
+            <input type="text" id="choice_data_time_list" style="display: none" value="{{ choice_data_time_list }}">
+
+            <div id="Shopping-Cart" class="demo-transfer" style="display: inline-block;"></div>
+
+            <div class="layui-btn-container" style="display: inline-block; width: 10%;">
+              <button type="button" class="layui-btn" lay-demotransferactive="getData">获取已选数据</button>
+            </div>
+        </div>
+
+        <div style="width: 600px; margin-left: 620px;">
+            <form class="layui-form" action="">
+                <div id="choice-result" style="background-color: white; border: solid 1px #dadada; width: 700px; height: 360px; overflow: auto;">
+
+                </div>
+
+                <div class="layui-inline">
+                    <input class="layui-btn" type="button" value="生成数据集" id="generate-data-set">
+                    <label id="generate-data-set-msg" style="color: red;"></label>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    <script>
+        //字符串格式化
+        String.prototype.format = function () {
+            var values = arguments;
+            return this.replace(/\{(\d+)\}/g, function (match, index) {
+                if (values.length > index) {
+                    return values[index];
+                } else {
+                    return "";
+                }
+            });
+        };　
+
+        layui.use(['transfer', 'util'], function(){
+          var transfer = layui.transfer
+          ,util = layui.util;
+
+          var data1 = JSON.parse($("#data_time_list").val());
+
+          //显示搜索框
+          transfer.render({
+            elem: '#Shopping-Cart'
+            ,data: data1
+            ,title: ['所有数据', '已选数据']
+            ,showSearch: true
+            ,id: 'demo1'
+          });
+          //批量办法定事件
+          util.event('lay-demoTransferActive', {
+            getData: function(othis){
+              var getData = transfer.getData('demo1'); //获取右侧数据
+              console.log(JSON.stringify(getData));
+              $.ajax({
+                  url: "/thickness/generate-dataset/",
+                  data: {'selected_data': JSON.stringify(getData)},
+                  type: "POST",
+                  dataType: 'JSON',
+                  success: function (arg) {
+                      var div = $('#choice-result');
+                      div.html(arg.message);
+
+                      {#for(i = 0; i < arg.param_list.length; i++){#}
+
+                      //动态生成js代码
+                      var myScript= document.createElement("script");
+                          myScript.type = "text/javascript";
+                          myScript.appendChild(document.createTextNode("{0}".format(arg.script)));
+                          document.body.appendChild(myScript);
+                      }
+                  })
+                }
+              });
+             });
+        
+        $(function () {
+            GenerDataSet();
+        });
+
+        //生成数据集
+        function GenerDataSet() {
+            $('#generate-data-set').click(function () {
+                var input_list = [];
+                var input = $('#choice-result input');
+                $.each(input, function (i, item) {
+                    input_list.push(item.value);
+                 });
+                console.log(input_list);  //input_list : ["2019-09-19", "30", "50", "2019-09-18", "", ""]
+
+                $.ajax({
+                    url: "/thickness/generate-dataset-ajax/",
+                    type: "POST",
+                    data: {'input_list': JSON.stringify(input_list)},
+                    dataType: "JSON",
+                    success:function (arg) {
+                        if(arg.status){
+                            $('#generate-data-set-msg').text(arg.message);
+                            ClearMSG('generate-data-set-msg');
+                        }else{
+                            $('#generate-data-set-msg').text(arg.message);
+                            ClearMSG('generate-data-set-msg');
+                        }
+                    }
+                 })
+            })
+        }
+
+
+        //清除提示信息
+        function ClearMSG(nid) {
+            setTimeout(function () {
+                $("#"+nid).text('')
+            }, 3000);
+        }
+
+
+
+
+
+    </script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+

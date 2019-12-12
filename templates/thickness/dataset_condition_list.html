@@ -1,0 +1,120 @@
+{% extends 'index.html' %}
+{% load staticfiles %}
+
+{% block right-content-container %}
+    <div style="padding: 15px; margin-top: -40px" class="layui-anim">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+          <legend>数据集筛选条件</legend>
+        </fieldset>
+        <fieldset class="layui-elem-field">
+        <legend>数据集筛选条件列表</legend>
+            <div class="layui-field-box">
+            <table class="layui-table layui-form">
+                <thead>
+                    <tr>
+                        <th style="width: 20px">ID</th>
+                        <th>数据集筛选条件</th>
+                        <th style="width: 300px">操作</th>
+                        <th style="width: 80px">详细数据</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in all_dataset %}
+                        <tr>
+                            <td>{{ item.id }}</td>
+                            <td>{{ item.time_and_id }}</td>
+                            <td>
+                                <button lay-submit="" lay-filter="submit" class="layui-btn" onclick="RunAlg(this)">跑算法</button>
+                                <button lay-submit="" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveDataSet(this)">删除数据集</button>
+                                <label id="run-alg-msg-{{ item.id }}" style="color: red;"></label>
+                            </td>
+                            <td><a href="{% url 'single_dataset_list' item.id %}">详细数据</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        </fieldset>
+    </div>
+
+
+    <script>
+        //跑算法
+        function RunAlg(ths) {
+            layer.load();
+            var $td = $(ths).parent().parent().children();
+            var nid = $td.eq(0).text();
+            console.log(nid);
+            $.ajax({
+                url: '/thickness/dataset-run-alg-ajax/',
+                type: 'POST',
+                data: {'nid': nid},
+                dataType: 'JSON',
+                success:function (arg) {
+                    layer.closeAll('loading'); //关闭loading
+                    if(arg.status){
+                            $('#run-alg-msg-'+nid).text(arg.message);
+                            ClearMSG('run-alg-msg-'+nid);
+                        }else{
+                            $('#run-alg-msg-'+nid).text(arg.message);
+                            ClearMSG('run-alg-msg-'+nid);
+                        }
+                    }
+                 })
+            }
+        //删除数据集
+        function RemoveDataSet(ths) {
+
+            layer.msg('确定删除？', {
+              time: 0 //不自动关闭
+              ,btn: ['删除', '取消']
+              ,yes: function(index){
+                layer.close(index);
+                var $td = $(ths).parent().parent().children();
+                var nid = $td.eq(0).text();
+                console.log(nid);
+                $.ajax({
+                    url: '/thickness/remove-dataset-ajax/',
+                    type: 'POST',
+                    data: {'nid': nid},
+                    dataType: 'JSON',
+                    success:function (arg) {
+                        if(arg.status){
+                                $('#run-alg-msg-'+nid).text(arg.message);
+                                ClearMSG('run-alg-msg-'+nid);
+                                window.location.reload();
+                            }else{
+                                $('#run-alg-msg-'+nid).text(arg.message);
+                                ClearMSG('run-alg-msg-'+nid);
+                            }
+                        }
+                     })
+              }
+            });
+
+
+            }
+
+        //清除提示信息
+        function ClearMSG(nid) {
+            setTimeout(function () {
+                $("#"+nid).text('')
+            }, 3000);
+        }
+    </script>
+
+
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,133 @@
+{% extends 'index.html' %}
+{% load staticfiles %}
+
+{% block right-content-container %}
+
+    <div style="padding: 15px; margin-top: -40px" class="layui-anim">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+          <legend>单条数据波形图</legend>
+        </fieldset>
+
+        <div id="container" style="width: 1600px; margin-left: 15px">
+        </div>
+
+        <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
+            <div style="padding: 20px; background-color: #F2F2F2;">
+              <div class="layui-row layui-col-space15">
+                <div class="layui-col-md6">
+                  <div class="layui-card">
+                    <div class="layui-card-header">当前数据信息详情</div>
+                    <div class="layui-card-body">
+                        所在文件：{{ file_name }}<br>
+                        创建时间：{{ create_time }}<br>
+                        数据ID: {{ nid }}<br>
+                        {% for k, v in message_head.items %}
+                            {{ k }}：{{ v }}<br>
+                        {% endfor %}
+                    </div>
+                  </div>
+                </div>
+                <div class="layui-col-md6">
+                  <div class="layui-card">
+                    <div class="layui-card-header">卡片面板</div>
+                    <div class="layui-card-body">
+                        {% if thickness == "-1.0" %}
+                            跑算法得出厚度值：暂未计算厚度值<br>
+                        {% else %}
+                            跑算法得出厚度值：{{ thickness }} mm<br>
+                        {% endif %}
+                        {% for kk,vv in message_body_param.items %}
+                            {{ kk }}：{{ vv }}<br>
+                        {% endfor %}
+                        <div id="show-big-img">
+                            <img style="width: 120px; height: 120px;" src="{{ img_path }}" onclick="ShowBigImage()">
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="text" id="chart-data" style="display: none;" value="{{ data_list }}">
+
+    <script>
+    Highcharts.setOptions({
+            global: {
+                useUTC: false
+            }
+        });
+
+        $(function(){
+            initChart();
+         });
+
+        function initChart() {
+            var config = {
+                chart: {
+                    type: 'spline',
+                    shadow: true,
+                },
+                title: {
+                    text: 'ID值: ' + {{ nid }}
+                },
+                xAxis: {
+                    type: 'linear',
+                },
+                yAxis: {
+                    endOnTick: false, //对数Y轴不强制结束于标线
+                    title: {
+                        text: '数值'
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 1,
+                        color: '#808080'
+                    }]
+                },
+                tooltip: {
+                    formatter: function () {
+                        return '<b>' + this.series.name + '</b><br/>' +
+                                Highcharts.numberFormat(this.x) + '<br/>' +
+                                Highcharts.numberFormat(this.y, 2);
+                    }
+                },
+                legend: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: true
+                },
+                series: [
+                    {
+                        name: '当前数据集厚度曲线',
+                        data: JSON.parse($('#chart-data').val())
+                    },
+                ]
+            };
+            $('#container').highcharts(config);
+        }
+
+        function ShowBigImage() {
+                 layer.photos({
+                     photos: '#show-big-img',
+                     shadeClose: true,
+                     closeBtn: 2,
+                     anim: 0
+                 });
+            }
+
+
+    </script>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
