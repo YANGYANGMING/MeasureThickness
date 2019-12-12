@@ -19,27 +19,77 @@
                     </tr>
                 </thead>
 
-                <tbody>
-                    {% for item in all_dataset %}
-                        <tr>
-                            <td>{{ item.id }}</td>
-                            <td>{{ item.time_and_id }}</td>
-                            <td>
-                                <button lay-submit="" lay-filter="submit" class="layui-btn" onclick="RunAlg(this)">跑算法</button>
-                                <button lay-submit="" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveDataSet(this)">删除数据集</button>
-                                <label id="run-alg-msg-{{ item.id }}" style="color: red;"></label>
-                            </td>
-                            <td><a href="{% url 'single_dataset_list' item.id %}">详细数据</a></td>
-                        </tr>
-                    {% endfor %}
+                <tbody id="tb-list">
                 </tbody>
             </table>
         </div>
         </fieldset>
     </div>
+    <div id="pager-id"></div>
+    <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
 
     <script>
+
+        $(function () {
+            loadData(); //加载数据
+            getPage();  //获取分页信息
+         });
+
+        var curr_page = 1;
+        var limit = 10;
+        var total = $('#total-count').val();
+
+        function loadData() {
+            $.ajax({
+                url: '/thickness/dataset-condition-list/',
+                type: "POST",
+                data: {
+                    'curr_page': curr_page,
+                    'limit': limit,
+                },
+                dataType: "JSON",
+                success:function (ret) {
+                    var data_list = ret.data_list;
+                    var html = '';
+                    $.each(data_list, function (k, v) {
+                        var nid = v.id;
+                        var time_and_id = v.time_and_id;
+                        html += "<tr>";
+                        html += "<td>" + nid + "</td>";
+                        html += "<td>" + time_and_id + "</td>";
+                        html += "<td>";
+                        html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn\" onclick=\"RunAlg(this)\">跑算法</button>";
+                        html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn layui-btn-danger\" onclick=\"RemoveDataSet(this)\">删除数据集</button>";
+                        html += "<label id=\"run-alg-msg-" + nid + "\" style=\"color: red;\"></label>";
+                        html += "</td>";
+                        html += "<td><a href=\"/thickness/single-dataset-list" + "/" + nid + "\">详细数据</a></td>";
+                        html += "</tr>";
+                    });
+                    $("#tb-list").empty().append(html); //页面填充
+                    }
+                });
+            }
+
+            function getPage() {
+                layui.use(['laypage'], function() {
+                    var laypage = layui.laypage;
+                    laypage.render({
+                        elem: 'pager-id'
+                        ,count: total
+                        ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
+                        ,jump: function(obj, first){
+                            curr_page = obj.curr; //当前页
+                            limit = obj.limit;   //每页显示的条数
+                            if(!first){
+                                loadData()
+                                }
+                            }
+                          });
+                     });
+                }
+
+
         //跑算法
         function RunAlg(ths) {
             layer.load();

@@ -14,15 +14,6 @@
             </div>
             <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
                 <fieldset class="layui-elem-field">
-            <form class="layui-form" action="/thickness/single-dataset-list/{{ nid }}">
-                <div class="layui-form-item" style="margin-left: 400px; margin-bottom: -10px">
-                <label class="layui-form-label">Data ID</label>
-                    <div class="layui-input-inline" style="width: 400px;">
-                        <input type="text" id="selected-data-id" name="selected-data-id" class="layui-input" placeholder="{{ data_id_range }}">
-                    </div>
-                    <input class="layui-btn" type="submit" style="margin-left: 20px; background-color: #36c2c6" value="筛选">
-                </div>
-            </form>
                 <legend>数据集筛选条件列表</legend>
                 <div class="layui-field-box">
                     <table class="layui-table layui-form">
@@ -35,32 +26,79 @@
                             </tr>
                         </thead>
 
-                        <tbody>
-                            {% for item in data_list %}
-                                <tr>
-                                    <td>{{ item.time }}</td>
-                                    <td>{{ item.data_id }}</td>
-                                    <td>{{ item.thickness }}</td>
-                                    {% if item.thickness == "" %}
-                                        <td><a href="{% url 'data_2048_chart' item.data_id '-1.0' %}">数据波形</a></td>
-                                    {% else %}
-                                        <td><a href="{% url 'data_2048_chart' item.data_id item.thickness %}">数据波形</a></td>
-                                    {% endif %}
-                                </tr>
-                            {% endfor %}
+                        <tbody id="tb-list">
                         </tbody>
                     </table>
                 </div>
                 </fieldset>
             </div>
         </div>
-        <input type="text" id="chart-data" style="display: none;" value="{{ thickness_data_list }}">
-        <input type="text" id="data-id-range" style="display: none;" value="{{ data_id_range }}">
-        <div class="layui-box layui-laypage layui-laypage-molv" style="margin-left: 20px; margin-top: -6px;">
-            {{ page_obj.page_str|safe }}
-        </div>
+
+        <div id="pager-id"></div>
+        <input type="text" style="display: none;" id="nid" value="{{ nid }}">
+        <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
         <script>
+
+        $(function () {
+            loadData(); //加载数据
+            getPage();  //获取分页信息
+         });
+
+        var curr_page = 1;
+        var limit = 10;
+        var total = $('#total-count').val();
+        var nid = $('#nid').val();
+
+        function loadData() {
+            $.ajax({
+                url: '/thickness/single-dataset-list/' + nid,
+                type: "POST",
+                data: {
+                    'curr_page': curr_page,
+                    'limit': limit,
+                },
+                dataType: "JSON",
+                success:function (ret) {
+                    var data_list = ret.data_list;
+                    var html = '';
+                    $.each(data_list, function (k, v) {
+                        var time = v.time;
+                        var data_id = v.data_id;
+                        var thickness = v.thickness;
+                        html += "<tr>";
+                        html += "<td>" + time + "</td>";
+                        html += "<td>" + data_id + "</td>";
+                        html += "<td>" + thickness + "</td>";
+                        if(thickness === ''){
+                            html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/-1.0\">数据波形</a></td>";
+                        }else{
+                            html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + thickness + "\">数据波形</a></td>";
+                        }
+                        html += "</tr>";
+                    });
+                    $("#tb-list").empty().append(html); //页面填充
+                    }
+                });
+            }
+
+            function getPage() {
+                layui.use(['laypage'], function() {
+                    var laypage = layui.laypage;
+                    laypage.render({
+                        elem: 'pager-id'
+                        ,count: total
+                        ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
+                        ,jump: function(obj, first){
+                            curr_page = obj.curr; //当前页
+                            limit = obj.limit;   //每页显示的条数
+                            if(!first){
+                                loadData()
+                                }
+                            }
+                          });
+                     });
+                }
 
 
         </script>

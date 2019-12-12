@@ -16,7 +16,7 @@ urlpatterns = [
 
     re_path(r'^generate-dataset/$', DataSet.GenerateDataSetView.as_view()),
 
-    re_path(r'^dataset-condition-list/$', DataSet.DataSetConditionListView.as_view()),
+    re_path(r'^dataset-condition-list/$', DataSet.dataset_condition_list),
 
     re_path(r'^generate-dataset-ajax/$', DataSet.generate_dataset_ajax),
 
@@ -26,7 +26,7 @@ urlpatterns = [
     re_path(r'^remove-dataset-ajax/$', DataSet.remove_dataset_ajax),
 
     re_path(r'^single-dataset-list/(\d+)$', DataSet.single_dataset_list, name='single_dataset_list'),
-    re_path(r'^data-2048-chart/(\d+)/(-?\d+\.\d+)$', DataSet.data_2048_chart, name='data_2048_chart'),
+    re_path(r'^data-2048-chart/(\d+)/(-?\d+\.?\d*)$', DataSet.data_2048_chart, name='data_2048_chart'),
 
     re_path(r'^test/$', DataSet.test),
 

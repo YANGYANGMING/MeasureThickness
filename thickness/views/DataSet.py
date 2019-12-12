@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
 from MeasureThickness.settings import Base_img_path
 from utils.handel_data import *
-from utils.pager import Pagination
+from utils.layui_pager import LayuiPager
 from utils import readfiles, file_type
 from utils.readfiles import *
 from django.views import View
@@ -68,29 +68,21 @@ class TagManageView(View):
 @csrf_exempt
 def single_file_data(request, nid):
     """单个文件内的数据"""
-    if request.method == 'GET':
-        file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
-        file_name = file_obj['file_name__file_name']
-        file_id = file_obj['file_name_id']
-        single_file_obj = models.DataFile.objects.values('nid', 'run_alg_thickness').filter(file_name_id=nid).all().order_by('nid')
-        count = len(single_file_obj)
+    single_file_obj = models.DataFile.objects.values('nid', 'run_alg_thickness').filter(file_name_id=nid).all().order_by('nid')
+    count = len(single_file_obj)
+    file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
+    file_name = file_obj['file_name__file_name']
+    file_id = file_obj['file_name_id']
 
-    # 分页
-    if request.method == "POST":
-        single_file_obj = models.DataFile.objects.values('nid', 'run_alg_thickness').filter(
-            file_name_id=nid).all().order_by('nid')
-        count = len(single_file_obj)
-        curr_pager = int(request.POST.get('curr_pager'))
-        limit = int(request.POST.get('limit'))
-        if curr_pager == 1:
-            start_range = curr_pager
-            end_range = curr_pager * limit + 1
-        else:
-            start_range = (curr_pager - 1) * limit + 1
-            end_range = curr_pager * limit + 1
-        single_file_obj = single_file_obj[start_range: end_range]
+    if request.method == "GET":
+        return render(request, "thickness/single_file_list.html", locals())
 
-    return render(request, "thickness/single_file_list.html", locals())
+    else:
+        # 分页
+        layui_pager = LayuiPager(request, single_file_obj)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
 
 
 class UploadFileView(View):
@@ -133,6 +125,7 @@ class UploadFileView(View):
 
         return HttpResponse(json.dumps(result))
 
+
 def callback_zero(request):
     """上传文件的回调清零"""
     global file_count
@@ -141,6 +134,7 @@ def callback_zero(request):
     file_type.file_fail_list = []
     result = {'status': True, 'message': 'success'}
     return HttpResponse(json.dumps(result))
+
 
 class GenerateDataSetView(View):
     """生成数据集"""
@@ -244,14 +238,22 @@ def generate_dataset_ajax(request):
 
     return HttpResponse(json.dumps(result))
 
-class DataSetConditionListView(View):
+@csrf_exempt
+def dataset_condition_list(request):
     """数据集条件列表"""
-    def get(self, request):
-        all_dataset_list = []
-        all_dataset = models.DataSetCondition.objects.all().values('id', 'time_and_id').order_by('-id')
-
+    all_dataset = models.DataSetCondition.objects.all().values('id', 'time_and_id').order_by('-id')
+    count = len(all_dataset)
+    if request.method == "GET":
         return render(request, 'thickness/dataset_condition_list.html', locals())
+    else:
+        # 分页
+        layui_pager = LayuiPager(request, all_dataset)
+        result = layui_pager.pager()
 
+        return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
 def single_dataset_list(request, nid):
     """单个数据集列表"""
     data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id', 'thickness')[0]
@@ -276,25 +278,17 @@ def single_dataset_list(request, nid):
             data_id = i
             data_list.append({'time': time, 'data_id': data_id, 'thickness': thickness})  #[{'time': '2019-09-20', 'data_id': 4, 'thickness': 39.028}, {'time': '2019-09-20', 'data_id': 5, 'thickness': 40.058}, {'time': '2019-09-20', 'data_id': 6, 'thickness': 38.012}]
 
-    # 绘制当前数据集的厚度值曲线
-    # thickness_data_list = json.dumps(list(zip(data_id_list, thickness_list)))
+    count = len(data_list)
 
-    #筛选
-    selected_data_id = request.GET.get('selected-data-id')
-    start_id = data_list[0]['data_id']
-    end_id = data_list[-1]['data_id']
-    if selected_data_id != '':
-        for ii in data_list:
-            if str(ii['data_id']) == selected_data_id:
-                data_list = [ii]
-                thickness_list = [ii['thickness']]
-    #分页
-    current_page = request.GET.get('p')
-    total_count = len(data_set_id)
-    page_obj = Pagination(total_count, current_page, nid)
-    data_list = data_list[page_obj.start(): page_obj.end()]
+    if request.method == "GET":
+        return render(request, 'thickness/single_dataset_list.html', locals())
+    else:
+        # 分页
+        layui_pager = LayuiPager(request, data_list)
+        result = layui_pager.pager()
 
-    return render(request, 'thickness/single_dataset_list.html', locals())
+        return HttpResponse(json.dumps(result))
+
 
 @csrf_exempt
 def dataset_run_alg_ajax(request):
@@ -314,6 +308,7 @@ def dataset_run_alg_ajax(request):
     except Exception as e:
         print(e, "跑算法出错！")
     return HttpResponse(json.dumps(result))\
+
 
 @csrf_exempt
 def single_file_run_alg_ajax(request):
@@ -348,6 +343,7 @@ def remove_dataset_ajax(request):
         print(e, "删除数据集出错！")
     return HttpResponse(json.dumps(result))
 
+
 def data_2048_chart(request, nid, thickness):
     """单条数据波形图和详细信息"""
     data_obj = models.DataFile.objects.filter(nid=nid).values('message_body_data', 'message_head', 'create_time', 'message_body_param', 'file_name_id')[0]
@@ -376,6 +372,7 @@ def data_2048_chart(request, nid, thickness):
 
     return render(request, 'thickness/data_2048_chart.html', locals())
 
+
 def clear_repeat_imgs():
     """清理重复图片"""
     db_img_set = set()
@@ -400,6 +397,7 @@ try:
 except Exception as e:
     print('err:', e)
     scheduler.shutdown()
+
 
 @csrf_exempt
 def test(request):

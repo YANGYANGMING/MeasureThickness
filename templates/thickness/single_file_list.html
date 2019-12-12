@@ -2,7 +2,6 @@
 {% load staticfiles %}
 
 {% block right-content-container %}
-{#        <div style="padding: 15px; margin-top: -40px" class="layui-anim">#}
         <fieldset class="layui-elem-field layui-field-title">
           <legend>单个文件数据</legend>
         </fieldset>
@@ -21,57 +20,82 @@
                             <th>波形图</th>
                         </tr>
                     </thead>
-
-                    <tbody>
-                        {% for item in single_file_obj %}
-                            <tr>
-                                <td>{{ item.nid }}</td>
-                                <td>{{ item.run_alg_thickness }}</td>
-                                {% if item.run_alg_thickness == None %}
-                                    <td><a href="{% url 'data_2048_chart' item.nid '-1.0' %}">数据波形</a></td>
-                                {% else %}
-                                    <td><a href="{% url 'data_2048_chart' item.nid item.run_alg_thickness %}">数据波形</a></td>
-                                {% endif %}
-                            </tr>
-                        {% endfor %}
+                    <tbody id="tb-list">
                     </tbody>
                 </table>
             </div>
             </fieldset>
         </div>
-{#        </div>#}
     <div id="pager-id"></div>
 
     <input type="text" style="display: none;" id="file-id" value="{{ file_id }}">
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
     <script>
-        file_id = $('#file-id').val();
 
-        layui.use(['laypage'], function() {
-            var laypage = layui.laypage;
-
-            laypage.render({
-                elem: 'pager-id'
-                ,count: $('#total-count').val()
-                ,layout: ['count', 'prev', 'page', 'next', 'limit', 'skip']
-                ,jump: function(obj, first){
-                    console.log(obj);
-                    console.log(first);
-                    var curr_pager = obj.curr;  //当前页
-                    var limit = obj.limit;      //每页显示的条数
-                    $.ajax({
-                        url: '/thickness/single-file-data/' + file_id,
-                        type: 'POST',
-                        dataType: 'JSON',
-                        data: {'curr_pager': curr_pager, 'limit': limit},
-                        success:function (arg) {
-
-                        }
-                     })
-                }
-              });
+        $(function () {
+            loadData(); //加载数据
+            getPage();  //获取分页信息
          });
+
+        var curr_page = 1;
+        var limit = 14;
+        var total = $('#total-count').val();
+        var file_id = $('#file-id').val();
+
+        function loadData() {
+            $.ajax({
+                url: '/thickness/single-file-data/' + file_id,
+                type: "POST",
+                data: {
+                    'curr_page': curr_page,
+                    'limit': limit,
+                },
+                dataType: "JSON",
+                success:function (ret) {
+                    var data_list = ret.data_list;
+                    var html = '';
+                    $.each(data_list, function (k, v) {
+                        var nid = v.nid;
+                        var run_alg_thickness = v.run_alg_thickness;
+                        html += "<tr>";
+                        html += "<td>" + nid + "</td>";
+                        html += "<td>" + run_alg_thickness + "</td>";
+                        if(run_alg_thickness === null){
+                            html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\">数据波形</a></td>";
+                        }else{
+                            html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/" + run_alg_thickness + "\">数据波形</a></td>";
+                        }
+                        html += "</tr>";
+                    });
+                    $("#tb-list").empty().append(html); //页面填充
+                    }
+                });
+            }
+
+            function getPage() {
+                limits = [14, 20, 30, 40, 50];
+                limit = 14;
+                layui.use(['laypage'], function() {
+                    var laypage = layui.laypage;
+                    laypage.render({
+                        elem: 'pager-id'
+                        ,count: total
+                        ,limits: limits
+                        ,limit: limit
+                        ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
+                        ,jump: function(obj, first){
+                            curr_page = obj.curr; //当前页
+                            limit = obj.limit;   //每页显示的条数
+                            console.log(total);
+                            if(!first){
+                                loadData()
+                                }
+                            }
+                          });
+                     });
+                }
+
 
 
         function RunAlg() {
