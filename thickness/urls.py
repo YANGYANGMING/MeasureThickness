@@ -10,7 +10,9 @@ urlpatterns = [
 
     re_path(r'^upload-file/$', DataSet.UploadFileView.as_view()),
 
-    re_path(r'^tag-manage/$', DataSet.TagManageView.as_view()),
+    re_path(r'^tag-manage/$', DataSet.tag_manage),
+    re_path(r'^tag-manage-ajax/$', DataSet.tag_manage_ajax),
+
     re_path(r'^single-file-data/(\d+)$', DataSet.single_file_data, name='single_file_data'),
     re_path(r'^single-file-run-alg-ajax/$', DataSet.single_file_run_alg_ajax),
 

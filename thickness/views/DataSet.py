@@ -16,25 +16,20 @@ handledataset = HandleDataSet()
 handleimgs = HandleImgs()
 file_count = 0
 
-
-class TagManageView(View):
+@csrf_exempt
+def tag_manage(request):
     """标签管理"""
-    @method_decorator(csrf_exempt)  # CSRF Token相关装饰器在CBV只能加到dispatch方法上
-    def dispatch(self, request, *args, **kwargs):
-        return super(TagManageView, self).dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
+    if request.method == "GET":
         file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
-
+        count = len(file_tag_obj)
         for item in file_tag_obj:
             if item['tag_content']:
                 tag_content_dict = eval(item['tag_content'])
                 item['file_explain'] = tag_content_dict['file_explain']
                 item['img_path'] = tag_content_dict['img_path']
-
         return render(request, "thickness/tag_manage.html", locals())
 
-    def post(self, request, *args, **kwargs):
+    if request.method == "POST":
         result = {'status': False, 'message': None}
         try:
             inputValue = request.POST.get('inputValue')
@@ -64,6 +59,24 @@ class TagManageView(View):
             print(e, '上传失败')
 
         return HttpResponse(json.dumps(result))
+
+@csrf_exempt
+def tag_manage_ajax(request):
+    """标签管理分页"""
+    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
+    for item in file_tag_obj:
+        if item['tag_content']:
+            tag_content_dict = eval(item['tag_content'])
+            item['file_explain'] = tag_content_dict['file_explain']
+            item['img_path'] = tag_content_dict['img_path']
+
+    if request.method == "POST":
+
+        layui_pager = LayuiPager(request, file_tag_obj)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
+
 
 @csrf_exempt
 def single_file_data(request, nid):
@@ -286,7 +299,7 @@ def single_dataset_list(request, nid):
 
     if request.method == "GET":
         return render(request, 'thickness/single_dataset_list.html', locals())
-    else:
+    elif request.method == "POST":
         # 分页
         layui_pager = LayuiPager(request, data_list)
         result = layui_pager.pager()
