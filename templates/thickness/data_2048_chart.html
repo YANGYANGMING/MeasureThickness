@@ -14,10 +14,10 @@
         <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
             <div style="padding: 20px; background-color: #F2F2F2;">
               <div class="layui-row layui-col-space15">
-                <div class="layui-col-md6">
+                <div class="layui-col-md4">
                   <div class="layui-card">
                     <div class="layui-card-header">当前数据信息详情</div>
-                    <div class="layui-card-body">
+                    <div class="layui-card-body" style="height: 250px;">
                         所在文件：{{ file_name }}<br>
                         创建时间：{{ create_time }}<br>
                         数据ID: {{ nid }}<br>
@@ -27,10 +27,10 @@
                     </div>
                   </div>
                 </div>
-                <div class="layui-col-md6">
+                <div class="layui-col-md4">
                   <div class="layui-card">
-                    <div class="layui-card-header">卡片面板</div>
-                    <div class="layui-card-body">
+                    <div class="layui-card-header">当前数据信息详情</div>
+                    <div class="layui-card-body" style="height: 250px;">
                         {% if thickness == "-1.0" %}
                             跑算法得出厚度值：暂未计算厚度值<br>
                         {% else %}
@@ -45,6 +45,18 @@
                     </div>
                   </div>
                 </div>
+                  <div class="layui-col-md4">
+                      <div class="layui-card">
+                        <div class="layui-card-header">修改当前数据厚度</div>
+                        <div class="layui-card-body" style="height: 250px;">
+                            手测厚度值：{{ true_thickness }} (mm)<br>
+                            <label for="true-thickness">手测厚度值：</label>
+                            <input type="text" id="true-thickness" class="layui-input" style="display: inline-block;width: 200px;">
+                            <button class="layui-btn" style="display: inline-block;" onclick="submit_true_thickness()">提交</button>
+                            <label id="set-thickness-msg" style="color: red;"></label>
+                        </div>
+                      </div>
+                    </div>
               </div>
             </div>
         </div>
@@ -109,6 +121,27 @@
             $('#container').highcharts(config);
         }
 
+        function submit_true_thickness() {
+            var true_thickness = $('#true-thickness').val();
+            $.ajax({
+                url: '/thickness/submit-true-thickness-ajax/',
+                type: 'POST',
+                data: {'true_thickness': true_thickness, 'nid': {{ nid }}},
+                dataType: 'JSON',
+                success: function (arg) {
+                    if(arg.status){
+                            $('#set-thickness-msg').text(arg.message);
+                            ClearMSG();
+                        }else{
+                            $('#set-thickness-msg').text(arg.message);
+                            ClearMSG();
+                        }
+                }
+
+            })
+
+        }
+
         function ShowBigImage() {
                  layer.photos({
                      photos: '#show-big-img',
@@ -117,6 +150,13 @@
                      anim: 0
                  });
             }
+
+        //清除提示信息
+        function ClearMSG() {
+            setTimeout(function () {
+                $("#set-thickness-msg").text('')
+            }, 2000);
+        }
 
 
     </script>

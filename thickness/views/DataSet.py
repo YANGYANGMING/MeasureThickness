@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
 from MeasureThickness.settings import Base_img_path
 from utils.handel_data import *
-from utils.pager import Pagination
+from utils.layui_pager import LayuiPager
 from utils import readfiles, file_type
 from utils.readfiles import *
 from django.views import View
@@ -16,28 +16,26 @@ handledataset = HandleDataSet()
 handleimgs = HandleImgs()
 file_count = 0
 
-
-class TagManageView(View):
+@csrf_exempt
+def tag_manage(request):
     """标签管理"""
-    @method_decorator(csrf_exempt)  # CSRF Token相关装饰器在CBV只能加到dispatch方法上
-    def dispatch(self, request, *args, **kwargs):
-        return super(TagManageView, self).dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
+    if request.method == "GET":
+        version = models.Version.objects.values('version').last()['version']
         file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
-
+        count = len(file_tag_obj)
         for item in file_tag_obj:
             if item['tag_content']:
                 tag_content_dict = eval(item['tag_content'])
                 item['file_explain'] = tag_content_dict['file_explain']
                 item['img_path'] = tag_content_dict['img_path']
-
         return render(request, "thickness/tag_manage.html", locals())
 
-    def post(self, request, *args, **kwargs):
+    if request.method == "POST":
         result = {'status': False, 'message': None}
         try:
-            inputValue = request.POST.get('inputValue')
+            true_thickness = request.POST.get('true-thickness')
+            print('true_thickness', true_thickness)
+            file_explain = request.POST.get('file-explain')
             nid = request.POST.get('nid')
             img_obj = request.FILES.get('img_obj')
             tag_content = models.DataTag.objects.values('tag_content').filter(id=nid)[0]['tag_content']
@@ -53,11 +51,14 @@ class TagManageView(View):
                     f.write(img_obj.read())
                 handleimgs.compress_image(Base_img_path + img_obj.name)
 
-                tag_content['file_explain'] = inputValue
+                tag_content['file_explain'] = file_explain
                 tag_content['img_path'] = '/' + Base_img_path + img_obj.name
             else:
-                tag_content['file_explain'] = inputValue
+                tag_content['file_explain'] = file_explain
                 tag_content['img_path'] = old_img_path
+
+            # if true_thickness == None:
+            models.DataFile.objects.filter(file_name=nid).update(true_thickness=true_thickness)
             models.DataTag.objects.filter(id=nid).update(tag_content=tag_content)
             result = {'status': True, 'message': tag_content['img_path']}
         except Exception as e:
@@ -66,31 +67,245 @@ class TagManageView(View):
         return HttpResponse(json.dumps(result))
 
 @csrf_exempt
-def single_file_data(request, nid):
-    """单个文件内的数据"""
-    if request.method == 'GET':
-        file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
-        file_name = file_obj['file_name__file_name']
-        file_id = file_obj['file_name_id']
-        single_file_obj = models.DataFile.objects.values('nid', 'run_alg_thickness').filter(file_name_id=nid).all().order_by('nid')
-        count = len(single_file_obj)
-
-    # 分页
+def tag_manage_ajax(request):
+    """标签管理分页"""
+    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
+    for item in file_tag_obj:
+        file_id = item['id']
+        true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0]['true_thickness']
+        item['true_thickness'] = true_thickness
+        if item['tag_content']:
+            tag_content_dict = eval(item['tag_content'])
+            item['file_explain'] = tag_content_dict['file_explain']
+            item['img_path'] = tag_content_dict['img_path']
     if request.method == "POST":
-        single_file_obj = models.DataFile.objects.values('nid', 'run_alg_thickness').filter(
-            file_name_id=nid).all().order_by('nid')
-        count = len(single_file_obj)
-        curr_pager = int(request.POST.get('curr_pager'))
-        limit = int(request.POST.get('limit'))
-        if curr_pager == 1:
-            start_range = curr_pager
-            end_range = curr_pager * limit + 1
-        else:
-            start_range = (curr_pager - 1) * limit + 1
-            end_range = curr_pager * limit + 1
-        single_file_obj = single_file_obj[start_range: end_range]
 
-    return render(request, "thickness/single_file_list.html", locals())
+        layui_pager = LayuiPager(request, file_tag_obj)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def single_file_data(request, nid, version):
+    """单个文件内的数据"""
+    # 从session中获取selected_version
+    selected_version = request.session.get('selected_version')
+    if not selected_version:
+        selected_version = models.Version.objects.values('version').last()['version']
+    #print(selected_version)
+    version_obj = models.Version.objects.values('version').order_by('-id')
+    data_obj = models.DataFile.objects.filter(file_name_id=nid).all().order_by('nid')
+    #print(data_obj)
+    single_file_obj = []
+    for item in data_obj:
+        vt = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
+        true_thickness = models.DataFile.objects.values('true_thickness').get(nid=vt['data_id'])['true_thickness']
+        vt['true_thickness'] = true_thickness
+        single_file_obj.append(vt)
+    count = len(single_file_obj)
+    file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
+    file_name = file_obj['file_name__file_name']
+    file_id = file_obj['file_name_id']
+
+    if request.method == "GET":
+        return render(request, "thickness/single_file_list.html", locals())
+
+    elif request.method == "POST":
+        # 分页
+        layui_pager = LayuiPager(request, single_file_obj)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def single_file_run_alg_ajax(request):
+    """跑算法得出 单个文件 厚度值"""
+    result = {'status': False, 'message': '算法执行失败'}
+    try:
+        data_id_list = []
+        file_id = request.POST.get('file_id')
+        selected_version = request.POST.get('version')
+        request.session['selected_version'] = selected_version
+        data_id_dict = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
+        for item in data_id_dict:
+            data_id_list.append(item['nid'])
+        thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)  # 处理单个文件数据并跑算法
+        print('thickness_dict', thickness_dict)
+        for k, v in thickness_dict.items():
+            version_obj = models.Version.objects.get(version=selected_version)
+            if not version_obj:
+                print('wu')
+                models.Version.objects.create(version=selected_version)
+            data = models.DataFile.objects.get(nid=k)
+            version = models.Version.objects.get(version=selected_version)
+            vt_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
+            if vt_obj:
+                print('update')
+                vt_obj.update(run_alg_thickness=v)
+            else:
+                print('create')
+                models.VersionToThcikness.objects.create(data_id=data, version=version, run_alg_thickness=v)
+
+        result = {'status': True, 'message': '算法执行成功'}
+
+    except Exception as e:
+        print(e, "跑算法出错！")
+    return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def dataset_condition_list(request):
+    """数据集条件列表"""
+    all_dataset = models.DataSetCondition.objects.all().values('id', 'time_and_id').order_by('-id')
+    count = len(all_dataset)
+    version_obj = models.Version.objects.values('version').order_by('-id')
+    # 从session中获取selected_version
+    selected_version = request.session.get('selected_version')
+    if not selected_version:
+        selected_version = models.Version.objects.values('version').last()['version']
+    print(selected_version)
+
+    if request.method == "GET":
+        return render(request, 'thickness/dataset_condition_list.html', locals())
+    else:
+        # 分页
+        layui_pager = LayuiPager(request, all_dataset)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def single_dataset_list(request, nid):
+    """单个数据集列表"""
+    data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id', 'thickness')[0]
+    data_set_id = eval(data_time_condition_obj['data_set_id'])
+    data_time = eval(data_time_condition_obj['time_and_id'])  # [['2019-09-20', '10', '11'], ['2019-09-21', '13', '15']]
+    # 从session中获取selected_version
+    selected_version = request.session.get('selected_version')
+    if not selected_version:
+        selected_version = models.Version.objects.values('version').last()['version']
+    print(selected_version)
+    # 填充列表
+    data_list = []
+    for item in data_time:
+        for i in range(int(item[1]), int(item[2])+1):  # 数据集中单个日期的数据id范围
+            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=i)['true_thickness']
+            data_obj = models.DataFile.objects.get(nid=i)
+            run_alg_thickness_obj = data_obj.versiontothcikness_set.filter(version__version=selected_version).values('run_alg_thickness')
+            if run_alg_thickness_obj:   # 如果该数据集已跑算法
+                run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
+            else:
+                run_alg_thickness = None
+            time = item[0]
+            data_id = i
+            data_list.append({'time': time, 'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})  #[{'time': '2019-09-20', 'data_id': 4, 'thickness': 39.028}, {'time': '2019-09-20', 'data_id': 5, 'thickness': 40.058}, {'time': '2019-09-20', 'data_id': 6, 'thickness': 38.012}]
+
+    count = len(data_list)
+
+    if request.method == "GET":
+        return render(request, 'thickness/single_dataset_list.html', locals())
+    elif request.method == "POST":
+        # 分页
+        layui_pager = LayuiPager(request, data_list)
+        result = layui_pager.pager()
+
+        return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def dataset_run_alg_ajax(request):
+    """跑算法算出 数据集 厚度值"""
+    result = {'status': False, 'message': '算法执行失败'}
+    try:
+        import time
+        start = time.time()
+        nid = request.POST.get('nid')
+        selected_version = request.POST.get('selected_version')
+        print('selected_version', selected_version)
+        data_set_id_obj = models.DataSetCondition.objects.filter(id=nid).values('data_set_id')
+        data_set_id_list = eval(data_set_id_obj[0]['data_set_id'])
+        thickness_dict = handledataset.handle_data_and_run_alg(data_set_id_list, selected_version)  # 处理数据集数据并跑算法
+        for k, v in thickness_dict.items():
+            version_obj = models.Version.objects.get(version=selected_version)
+            if not version_obj:
+                print('wu')
+                models.Version.objects.create(version=selected_version)
+            data = models.DataFile.objects.get(nid=k)
+            version = models.Version.objects.get(version=selected_version)
+            vt_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
+            if vt_obj:
+                print('update')
+                vt_obj.update(run_alg_thickness=v)
+            else:
+                print('create')
+                models.VersionToThcikness.objects.create(data_id=data, version=version, run_alg_thickness=v)
+        result = {'status': True, 'message': '算法执行成功'}
+        end = time.time()
+        print('alg use time:', (end - start))
+    except Exception as e:
+        print(e, "跑算法出错！")
+    return HttpResponse(json.dumps(result))\
+
+
+@csrf_exempt
+def select_version_ajax(request):
+    """选择版本号，设置session值"""
+    result = {'status': False, 'message': None}
+    try:
+        select_version = request.POST.get('version')
+        request.session['selected_version'] = select_version
+        result = {'status': True, 'message': 'success'}
+    except Exception as e:
+        print(e)
+    return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def remove_dataset_ajax(request):
+    """删除数据集"""
+    result = {'status': False, 'message': '删除数据集失败'}
+    try:
+        nid = request.POST.get('nid')
+        models.DataSetCondition.objects.filter(id=nid).delete()
+        result = {'status': True, 'message': '删除数据集成功'}
+    except Exception as e:
+        print(e, "删除数据集出错！")
+    return HttpResponse(json.dumps(result))
+
+
+def data_2048_chart(request, nid, thickness):
+    """单条数据波形图和详细信息"""
+    data_obj = models.DataFile.objects.values('message_body_data', 'message_head', 'create_time',
+                                                              'message_body_param', 'file_name_id',
+                                                              'true_thickness').get(nid=nid)
+    #处理数据
+    message_head = eval(data_obj['message_head'])
+    data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])  # ' 3X,6144'
+    message_body_data = data_obj['message_body_data'].tobytes()
+    data = list(struct.unpack("<%sh" % data_len, message_body_data))
+    if data_obj['message_body_param']:
+        message_body_param = eval(data_obj['message_body_param'])
+    else:
+        message_body_param = ""
+    #传给前端的数据
+    true_thickness = data_obj['true_thickness']
+    data_list = json.dumps(list(enumerate(data)))
+    create_time = str(data_obj['create_time'])
+    file_name_id = data_obj['file_name_id']
+    data_tag_obj = models.DataTag.objects.values('tag_content', 'file_name').filter(id=file_name_id)[0]
+    tag_content_obj = data_tag_obj['tag_content']
+    file_name = data_tag_obj['file_name']
+    if tag_content_obj:
+        file_explain = eval(tag_content_obj)['file_explain']
+        img_path = eval(tag_content_obj)['img_path']
+    else:
+        img_path = ''
+        file_explain = ''
+
+    return render(request, 'thickness/data_2048_chart.html', locals())
 
 
 class UploadFileView(View):
@@ -133,6 +348,7 @@ class UploadFileView(View):
 
         return HttpResponse(json.dumps(result))
 
+
 def callback_zero(request):
     """上传文件的回调清零"""
     global file_count
@@ -141,6 +357,7 @@ def callback_zero(request):
     file_type.file_fail_list = []
     result = {'status': True, 'message': 'success'}
     return HttpResponse(json.dumps(result))
+
 
 class GenerateDataSetView(View):
     """生成数据集"""
@@ -212,7 +429,7 @@ class GenerateDataSetView(View):
                                   }
                               });""" % (item['title'], start_id, end_id, item['title'], item['title'], )
             script += "});"
-                # param_list.append({'time': item['title'], 'start_id': start_id, 'end_id': end_id})
+            # param_list.append({'time': item['title'], 'start_id': start_id, 'end_id': end_id})
             result = {'status': True, 'message': mark_safe(ele), 'script': mark_safe(script)}
 
         return HttpResponse(json.dumps(result))
@@ -225,13 +442,17 @@ def generate_dataset_ajax(request):
     try:
         import time
         result_list = []
-        input_list = json.loads(request.POST.get('input_list'))  #['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
+        input_list = json.loads(request.POST.get('input_list'))  # ['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
         for i in range(0, len(input_list), 3):
             result_list.append(input_list[i: i+3])
-        # print(result_list)  #[['2019-09-20', '5', '7'], ]        range(4,12)   choose(5,7)
-        #取出已选中的数据id
-        choose_dataset_id_list = handledataset.get_selected_data(result_list)    #[5, 6, 7, 20, 21]
-        #存入数据库
+        print(result_list)  # [['2019-09-20', '5', '7'], ]        range(4,12)   choose(5,7)
+        for data_item in result_list:  # 制作数据集时如果没有滑动滑条选取数据，默认选取当前日期的第一条数据
+            if data_item[1] == '' and data_item[2] == '':
+                nid = int(models.DataFile.objects.filter(create_time=data_item[0]).values('nid')[0]['nid'])
+                data_item[1] = data_item[2] = nid
+        # 取出已选中的数据id
+        choose_dataset_id_list = handledataset.get_selected_data(result_list)    # choose_dataset_id_list = [5, 6, 7, 20, 21]
+        # 存入数据库
         if choose_dataset_id_list:
             start = time.time()
             models.DataSetCondition.objects.create(time_and_id=result_list, data_set_id=choose_dataset_id_list)
@@ -244,137 +465,52 @@ def generate_dataset_ajax(request):
 
     return HttpResponse(json.dumps(result))
 
-class DataSetConditionListView(View):
-    """数据集条件列表"""
-    def get(self, request):
-        all_dataset_list = []
-        all_dataset = models.DataSetCondition.objects.all().values('id', 'time_and_id').order_by('-id')
 
-        return render(request, 'thickness/dataset_condition_list.html', locals())
+class DeviationRate(View):
+    """显示柱状图偏差率"""
 
-def single_dataset_list(request, nid):
-    """单个数据集列表"""
-    data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id', 'thickness')[0]
-    data_set_id = eval(data_time_condition_obj['data_set_id'])
-    data_time = eval(data_time_condition_obj['time_and_id'])  # [['2019-09-20', '10', '11'], ['2019-09-21', '13', '15']]
-    thickness_dict = data_time_condition_obj['thickness']       # str  {1: 40.058, 2: 40.058, 3: 40.058}
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(DeviationRate, self).dispatch(request, *args, **kwargs)
 
-    if thickness_dict == None:  # 如果该数据集暂未计算厚度值
-        thickness_dict = "{}"
-    else:
-        thickness_dict = eval(thickness_dict)  # {1: 40.058, 2: 40.058, 3: 40.058}
+    def get(self, request, *args, **kwargs):
+        version_obj = models.Version.objects.values('version').order_by('-id')
+        nid = args[0]
+        return render(request, 'thickness/deviation_rate.html', locals())
 
-    # 填充列表
-    data_list = []
-    for item in data_time:
-        for i in range(int(item[1]), int(item[2])+1):  # 数据集中单个日期的数据id范围
-            if thickness_dict != "{}":
-                thickness = thickness_dict[i]
-            else:
-                thickness = ''
-            time = item[0]
-            data_id = i
-            data_list.append({'time': time, 'data_id': data_id, 'thickness': thickness})  #[{'time': '2019-09-20', 'data_id': 4, 'thickness': 39.028}, {'time': '2019-09-20', 'data_id': 5, 'thickness': 40.058}, {'time': '2019-09-20', 'data_id': 6, 'thickness': 38.012}]
-
-    # 绘制当前数据集的厚度值曲线
-    # thickness_data_list = json.dumps(list(zip(data_id_list, thickness_list)))
-
-    #筛选
-    selected_data_id = request.GET.get('selected-data-id')
-    start_id = data_list[0]['data_id']
-    end_id = data_list[-1]['data_id']
-    if selected_data_id != '':
-        for ii in data_list:
-            if str(ii['data_id']) == selected_data_id:
-                data_list = [ii]
-                thickness_list = [ii['thickness']]
-    #分页
-    current_page = request.GET.get('p')
-    total_count = len(data_set_id)
-    page_obj = Pagination(total_count, current_page, nid)
-    data_list = data_list[page_obj.start(): page_obj.end()]
-
-    return render(request, 'thickness/single_dataset_list.html', locals())
+    # def post(self, request, *args, **kwargs):
+    #     result = {'status': False, 'message': ''}
+    #
+    #     return HttpResponse(json.dumps(result))
 
 @csrf_exempt
-def dataset_run_alg_ajax(request):
-    """跑算法算出 数据集 厚度值"""
-    result = {'status': False, 'message': '算法执行失败'}
-    try:
-        import time
-        start = time.time()
-        nid = request.POST.get('nid')
-        data_set_id_obj = models.DataSetCondition.objects.filter(id=nid).values('data_set_id')
-        data_set_id_list = eval(data_set_id_obj[0]['data_set_id'])
-        thickness_dict = handledataset.handle_data_and_run_alg(data_set_id_list)  # 处理数据集数据并跑算法
-        models.DataSetCondition.objects.filter(id=nid).update(thickness=thickness_dict)
-        result = {'status': True, 'message': '算法执行成功'}
-        end = time.time()
-        print('alg use time:', (end - start))
-    except Exception as e:
-        print(e, "跑算法出错！")
-    return HttpResponse(json.dumps(result))\
+def deviation_rate_ajax(request, nid):
+    """偏差率ajax"""
+    result = {'status': False, 'message': ''}
+    dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
+    dataset_id_list.sort()
+    print(dataset_id_list)
+    # for item in dataset_id_list:
 
-@csrf_exempt
-def single_file_run_alg_ajax(request):
-    """单个文件跑算法得出厚度值"""
-    result = {'status': False, 'message': '算法执行失败'}
-    try:
-        data_id_list = []
-        file_id = request.POST.get('file_id')
-        data_id_dict = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
-        for item in data_id_dict:
-            data_id_list.append(item['nid'])
-        thickness_dict = handledataset.handle_data_and_run_alg(data_id_list)  # 处理单个文件数据并跑算法
-        for k, v in thickness_dict.items():
-            models.DataFile.objects.filter(nid=k).update(run_alg_thickness=v)
 
-        result = {'status': True, 'message': '算法执行成功'}
 
-    except Exception as e:
-        print(e, "跑算法出错！")
     return HttpResponse(json.dumps(result))
 
 
 @csrf_exempt
-def remove_dataset_ajax(request):
-    """删除数据集"""
-    result = {'status': False, 'message': '删除数据集失败'}
+def submit_true_thickness(request):
+    """提交设置手测厚度"""
     try:
+        true_thickness = float(request.POST.get('true_thickness'))
         nid = request.POST.get('nid')
-        models.DataSetCondition.objects.filter(id=nid).delete()
-        result = {'status': True, 'message': '删除数据集成功'}
+        models.DataFile.objects.filter(nid=nid).update(true_thickness=true_thickness)
+        result = {'status': True, 'message': '设置成功'}
     except Exception as e:
-        print(e, "删除数据集出错！")
+        result = {'status': False, 'message': '数据格式有误'}
+        print(e)
+
     return HttpResponse(json.dumps(result))
 
-def data_2048_chart(request, nid, thickness):
-    """单条数据波形图和详细信息"""
-    data_obj = models.DataFile.objects.filter(nid=nid).values('message_body_data', 'message_head', 'create_time', 'message_body_param', 'file_name_id')[0]
-    #处理数据
-    message_head = eval(data_obj['message_head'])
-    data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])  # ' 3X,6144'
-    message_body_data = data_obj['message_body_data'].tobytes()
-    data = list(struct.unpack("<%sh" % data_len, message_body_data))
-    if data_obj['message_body_param']:
-        message_body_param = eval(data_obj['message_body_param'])
-    else:
-        message_body_param = ""
-    #传给前端的数据
-    data_list = json.dumps(list(enumerate(data)))
-    create_time = str(data_obj['create_time'])
-    file_name_id = data_obj['file_name_id']
-    data_tag_obj = models.DataTag.objects.values('tag_content', 'file_name').filter(id=file_name_id)[0]
-    tag_content_obj = data_tag_obj['tag_content']
-    file_name = data_tag_obj['file_name']
-    if tag_content_obj:
-        file_explain = eval(tag_content_obj)['file_explain']
-        img_path = eval(tag_content_obj)['img_path']
-    else:
-        img_path = ''
-        file_explain = ''
-
-    return render(request, 'thickness/data_2048_chart.html', locals())
 
 def clear_repeat_imgs():
     """清理重复图片"""
@@ -400,6 +536,7 @@ try:
 except Exception as e:
     print('err:', e)
     scheduler.shutdown()
+
 
 @csrf_exempt
 def test(request):

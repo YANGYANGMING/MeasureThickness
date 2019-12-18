@@ -2,7 +2,6 @@
 {% load staticfiles %}
 
 {% block right-content-container %}
-{#        <div style="padding: 15px; margin-top: -40px" class="layui-anim">#}
         <fieldset class="layui-elem-field layui-field-title">
           <legend>单个文件数据</legend>
         </fieldset>
@@ -11,76 +10,120 @@
             <fieldset class="layui-elem-field">
             <legend>文件【{{ file_name }}】数据</legend>
             <div class="layui-field-box">
+                <div class="layui-input-inline" style="width: 150px;">
+                    <select style="margin-left: 20px;" name="version" xm-select="version" xm-select-radio>
+                        {% for i in version_obj %}
+                            <option value="{{ i.version }}">{{ i.version }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
                 <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="RunAlg()">跑算法</button>
                 <label id="run-alg-msg" style="color: red;"></label>
                 <table class="layui-table layui-form">
                     <thead>
                         <tr>
                             <th>数据ID</th>
+                            <th>版本号</th>
                             <th>跑算法的厚度值(mm)</th>
+                            <th>手测厚度值(mm)</th>
                             <th>波形图</th>
                         </tr>
                     </thead>
-
-                    <tbody>
-                        {% for item in single_file_obj %}
-                            <tr>
-                                <td>{{ item.nid }}</td>
-                                <td>{{ item.run_alg_thickness }}</td>
-                                {% if item.run_alg_thickness == None %}
-                                    <td><a href="{% url 'data_2048_chart' item.nid '-1.0' %}">数据波形</a></td>
-                                {% else %}
-                                    <td><a href="{% url 'data_2048_chart' item.nid item.run_alg_thickness %}">数据波形</a></td>
-                                {% endif %}
-                            </tr>
-                        {% endfor %}
+                    <tbody id="tb-list">
                     </tbody>
                 </table>
             </div>
             </fieldset>
         </div>
-{#        </div>#}
     <div id="pager-id"></div>
 
     <input type="text" style="display: none;" id="file-id" value="{{ file_id }}">
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
+    <input type="text" style="display: none;" id="latest-version" value="{{ version }}">
 
+    <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
     <script>
-        file_id = $('#file-id').val();
+        var formSelects = layui.formSelects;
 
-        layui.use(['laypage'], function() {
-            var laypage = layui.laypage;
-
-            laypage.render({
-                elem: 'pager-id'
-                ,count: $('#total-count').val()
-                ,layout: ['count', 'prev', 'page', 'next', 'limit', 'skip']
-                ,jump: function(obj, first){
-                    console.log(obj);
-                    console.log(first);
-                    var curr_pager = obj.curr;  //当前页
-                    var limit = obj.limit;      //每页显示的条数
-                    $.ajax({
-                        url: '/thickness/single-file-data/' + file_id,
-                        type: 'POST',
-                        dataType: 'JSON',
-                        data: {'curr_pager': curr_pager, 'limit': limit},
-                        success:function (arg) {
-
-                        }
-                     })
-                }
-              });
+        $(function () {
+            loadData(); //加载数据
+            getPage();  //获取分页信息
+            ShowOriginData();
          });
+
+        var curr_page = 1;
+        var limit = 14;
+        var total = $('#total-count').val();
+        var file_id = $('#file-id').val();
+        var version = $('#latest-version').val();
+
+        function loadData() {
+            $.ajax({
+                url: '/thickness/single-file-data/' + file_id + '/' + version,
+                type: "POST",
+                data: {
+                    'curr_page': curr_page,
+                    'limit': limit,
+                },
+                dataType: "JSON",
+                success:function (ret) {
+                    var data_list = ret.data_list;
+                    var html = '';
+                    $.each(data_list, function (k, v) {
+                            var nid = v.data_id;
+                            var version = v.version__version;
+                            var run_alg_thickness = v.run_alg_thickness;
+                            var true_thickness = v.true_thickness;
+                            html += "<tr>";
+                            html += "<td>" + nid + "</td>";
+                            html += "<td>" + version + "</td>";
+                            html += "<td>" + run_alg_thickness + "</td>";
+                            html += "<td>" + true_thickness + "</td>";
+                            if(run_alg_thickness === null){
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\">数据波形</a></td>";
+                            }else{
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/" + run_alg_thickness + "\">数据波形</a></td>";
+                            }
+                            html += "</tr>";
+                    });
+                    $("#tb-list").empty().append(html); //页面填充
+                    }
+                });
+            }
+
+            function getPage() {
+                limits = [14, 20, 30, 40, 50];
+                limit = 14;
+                layui.use(['laypage'], function() {
+                    var laypage = layui.laypage;
+                    laypage.render({
+                        elem: 'pager-id'
+                        ,count: total
+                        ,limits: limits
+                        ,limit: limit
+                        ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
+                        ,jump: function(obj, first){
+                            curr_page = obj.curr; //当前页
+                            limit = obj.limit;   //每页显示的条数
+                            console.log(total);
+                            if(!first){
+                                loadData()
+                                }
+                            }
+                          });
+                     });
+                }
 
 
         function RunAlg() {
-
             layer.load();
+            var version = formSelects.value('version', 'valStr');
+            console.log(version);
             $.ajax({
                 url: '/thickness/single-file-run-alg-ajax/',
                 type: 'POST',
-                data: {'file_id': file_id},
+                data: {'file_id': file_id, 'version': version},
                 dataType: 'JSON',
                 success: function (arg) {
                     layer.closeAll('loading'); //关闭loading
@@ -95,6 +138,31 @@
             })
 
         }
+
+        //选择版本并显示已选版本的数据信息
+        function SelectVersion() {
+            var version = formSelects.value('version', 'valStr');
+            console.log(version);
+            $.ajax({
+                url: '/thickness/select-version-ajax/',
+                type: 'POST',
+                data: {'version': version},
+                dataType: 'JSON',
+                success: function (arg) {
+                    if (arg.status){
+                        window.location.reload();
+                    }
+                }
+            })
+
+        }
+        
+        function ShowOriginData() {
+            var selected_version = [];
+            selected_version.push('{{ selected_version }}');
+            formSelects.value('version', selected_version);
+        }
+
 
         //清除提示信息
         function ClearMSG(id) {
