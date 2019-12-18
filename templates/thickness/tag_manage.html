@@ -16,6 +16,7 @@
                     <th style="width: 20px">ID</th>
                     <th style="width: 200px">文件名</th>
                     <th style="width: 150px">图片</th>
+                    <th style="width: 80px">手测厚度</th>
                     <th>文件描述</th>
                 </tr>
               </thead>
@@ -28,6 +29,7 @@
     </div>
     <div id="pager-id"></div>
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
+    <input type="text" style="display: none;" id="version" value="{{ version }}">
 
     <script>
 
@@ -57,12 +59,15 @@
                         var file_name = v.file_name;
                         var img_path = v.img_path;
                         var file_explain = v.file_explain;
+                        var true_thickness = v.true_thickness;
+                        var version = $('#version').val();
                         html += "<tr>";
                         html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
                         html += "<td>" + nid + "</td>";
-                        html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "\">" + file_name + "</a></td>";
+                        html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "/" + version +  "\">" + file_name + "</a></td>";
                         html += "<td edit-enable=\"true\" edit-type=\"file\" id=\"show-img-" + nid + "\"><img src=\"" + img_path + "\" onclick=\"ShowBigImage(this)\"></td>";
-                        html += "<td edit-enable=\"true\" edit-type=\"input\">" + file_explain + "</td>";
+                        html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"true-thickness\">" + true_thickness + "</td>";
+                        html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"file-explain\">" + file_explain + "</td>";
                         html += "</tr>";
                     });
                     $("#table_tb").empty().append(html); //页面填充
@@ -118,6 +123,7 @@
                 //$(this) = td
                 var editEnable = $(this).attr('edit-enable');
                 var editType = $(this).attr('edit-Type');
+                var editId = $(this).attr('id');
                 if(editEnable === 'true'){
                     if(editType === 'input'){
                         //文本框
@@ -125,6 +131,7 @@
                         var input = document.createElement('input');
                         input.className = 'layui-input';
                         input.value = innerText;
+                        input.id = editId;
                         $(this).html(input);
 
                     }else if(editType === 'file'){
@@ -149,12 +156,13 @@
                 //$(this) = td
                 var editEnable = $(this).attr('edit-enable');
                 var editType = $(this).attr('edit-Type');
+                var editId = $(this).attr('id');   //true-thickness  file-explain
                 if(editEnable === 'true'){
                     if(editType === 'input'){
                         var $input = $(this).children().first();
                         var inputValue = $input.val();
                         $(this).html(inputValue);
-                        fd.append('inputValue', inputValue);
+                        fd.append(editId, inputValue);
                     }else if(editType === 'file'){
                         var img_obj = $('#img-'+ nid)[0].files[0];
                         fd.append('img_obj', img_obj)

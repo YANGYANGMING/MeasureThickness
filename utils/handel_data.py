@@ -21,7 +21,7 @@ class HandleDataSet(object):
         except Exception as e:
             print(e, "取出指定日期内指定id范围的数据，组成数据集时候发生错误，选择的数据ID不是有效值")
 
-    def handle_data_and_run_alg(self, data_id_list):
+    def handle_data_and_run_alg(self, data_id_list, version):
         """跑算法前处理数据并且跑算法得出厚度值"""
         thickness_dict = {}
         for data_id_item in data_id_list:
@@ -36,7 +36,8 @@ class HandleDataSet(object):
                 gain = 60
             data = list(struct.unpack("<%sh" % data_len, message_body_data))
             if len(data) == data_len:
-                thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len)
+                thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
+                print(thick_mm)
             else:
                 thick_mm = -19.0
             thickness_dict[data_id_item] = thick_mm

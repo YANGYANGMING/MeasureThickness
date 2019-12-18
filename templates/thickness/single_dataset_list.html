@@ -6,37 +6,36 @@
         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
           <legend>数据集详细信息</legend>
         </fieldset>
-        {% if thickness_dict == "{}" %}
-            <div style="margin-left: 20px; color: #ff4c4c;">该数据集暂未计算厚度值</div>
-        {% endif %}
-
-            <div id="container" style="width: 1600px; margin-left: 15px">
-            </div>
-            <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
-                <fieldset class="layui-elem-field">
-                <legend>数据集筛选条件列表</legend>
-                <div class="layui-field-box">
-                    <table class="layui-table layui-form">
-                        <thead>
-                            <tr>
-                                <th>时间</th>
-                                <th>数据ID</th>
-                                <th>跑算法得出厚度值(mm)</th>
-                                <th>波形图</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="tb-list">
-                        </tbody>
-                    </table>
-                </div>
-                </fieldset>
-            </div>
+        <a href="/thickness/deviation-rate/{{ nid }}"><button style="margin-left: 20px" lay-filter="submit" class="layui-btn">查看数据集偏差率</button></a>
+        <div id="container" style="width: 1600px; margin-left: 15px">
         </div>
+        <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
+            <fieldset class="layui-elem-field">
+            <legend>数据集筛选条件列表</legend>
+            <div class="layui-field-box">
+                <table class="layui-table layui-form">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>数据ID</th>
+                            <th>版本号</th>
+                            <th>跑算法得出厚度值(mm)</th>
+                            <th>手测厚度值(mm)</th>
+                            <th>波形图</th>
+                        </tr>
+                    </thead>
 
-        <div id="pager-id"></div>
-        <input type="text" style="display: none;" id="nid" value="{{ nid }}">
-        <input type="text" style="display: none;" id="total-count" value="{{ count }}">
+                    <tbody id="tb-list">
+                    </tbody>
+                </table>
+            </div>
+            </fieldset>
+        </div>
+    </div>
+
+    <div id="pager-id"></div>
+    <input type="text" style="display: none;" id="nid" value="{{ nid }}">
+    <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
         <script>
 
@@ -65,15 +64,18 @@
                     $.each(data_list, function (k, v) {
                         var time = v.time;
                         var data_id = v.data_id;
-                        var thickness = v.thickness;
+                        var run_alg_thickness = v.run_alg_thickness;
+                        var true_thickness = v.true_thickness;
                         html += "<tr>";
                         html += "<td>" + time + "</td>";
                         html += "<td>" + data_id + "</td>";
-                        html += "<td>" + thickness + "</td>";
-                        if(thickness === ''){
+                        html += "<td>" + '{{ selected_version }}' + "</td>";
+                        html += "<td>" + run_alg_thickness + "</td>";
+                        html += "<td>" + true_thickness + "</td>";
+                        if(run_alg_thickness === ''){
                             html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/-1.0\">数据波形</a></td>";
                         }else{
-                            html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + thickness + "\">数据波形</a></td>";
+                            html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + run_alg_thickness + "\">数据波形</a></td>";
                         }
                         html += "</tr>";
                     });

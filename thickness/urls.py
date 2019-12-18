@@ -13,8 +13,9 @@ urlpatterns = [
     re_path(r'^tag-manage/$', DataSet.tag_manage),
     re_path(r'^tag-manage-ajax/$', DataSet.tag_manage_ajax),
 
-    re_path(r'^single-file-data/(\d+)$', DataSet.single_file_data, name='single_file_data'),
+    re_path(r'^single-file-data/(\d+)/(.*)$', DataSet.single_file_data, name='single_file_data'),
     re_path(r'^single-file-run-alg-ajax/$', DataSet.single_file_run_alg_ajax),
+    re_path(r'^select-version-ajax/$', DataSet.select_version_ajax),
 
     re_path(r'^generate-dataset/$', DataSet.GenerateDataSetView.as_view()),
 
@@ -29,6 +30,10 @@ urlpatterns = [
 
     re_path(r'^single-dataset-list/(\d+)$', DataSet.single_dataset_list, name='single_dataset_list'),
     re_path(r'^data-2048-chart/(\d+)/(-?\d+\.?\d*)$', DataSet.data_2048_chart, name='data_2048_chart'),
+    re_path(r'^submit-true-thickness-ajax/$', DataSet.submit_true_thickness),
+
+    re_path(r'^deviation-rate/(\d+)/$', DataSet.DeviationRate.as_view()),
+    re_path(r'^deviation-rate-ajax/(\d+)/$', DataSet.deviation_rate_ajax),
 
     re_path(r'^test/$', DataSet.test),
 

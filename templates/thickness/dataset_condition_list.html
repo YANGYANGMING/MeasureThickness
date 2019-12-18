@@ -8,6 +8,14 @@
         </fieldset>
         <fieldset class="layui-elem-field">
         <legend>数据集筛选条件列表</legend>
+            <div class="layui-input-inline" style="width: 150px; margin-left: 20px;">
+                <select name="version" xm-select="version" xm-select-radio>
+                    {% for i in version_obj %}
+                        <option value="{{ i.version }}">{{ i.version }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
             <div class="layui-field-box">
             <table class="layui-table layui-form">
                 <thead>
@@ -29,11 +37,17 @@
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
 
+    <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
     <script>
 
+        var formSelects = layui.formSelects;
+
+
         $(function () {
+            ShowOriginData();
             loadData(); //加载数据
             getPage();  //获取分页信息
+
          });
 
         var curr_page = 1;
@@ -41,6 +55,8 @@
         var total = $('#total-count').val();
 
         function loadData() {
+            var version = formSelects.value('version', 'valStr');
+            console.log('1', version);
             $.ajax({
                 url: '/thickness/dataset-condition-list/',
                 type: "POST",
@@ -93,19 +109,22 @@
         //跑算法
         function RunAlg(ths) {
             layer.load();
+            var version = formSelects.value('version', 'valStr');
+            console.log('2', version);
             var $td = $(ths).parent().parent().children();
             var nid = $td.eq(0).text();
             console.log(nid);
             $.ajax({
                 url: '/thickness/dataset-run-alg-ajax/',
                 type: 'POST',
-                data: {'nid': nid},
+                data: {'nid': nid, 'selected_version': version},
                 dataType: 'JSON',
                 success:function (arg) {
                     layer.closeAll('loading'); //关闭loading
                     if(arg.status){
                             $('#run-alg-msg-'+nid).text(arg.message);
                             ClearMSG('run-alg-msg-'+nid);
+
                         }else{
                             $('#run-alg-msg-'+nid).text(arg.message);
                             ClearMSG('run-alg-msg-'+nid);
@@ -142,14 +161,36 @@
                      })
               }
             });
+            }
 
+        //选择版本并显示已选版本的数据信息
+        function SelectVersion() {
+            var version = formSelects.value('version', 'valStr');
+            console.log('3', version);
+            $.ajax({
+                url: '/thickness/select-version-ajax/',
+                type: 'POST',
+                data: {'version': version},
+                dataType: 'JSON',
+                success: function (arg) {
+                    if (arg.status){
+                    }
+                }
+            })
 
+        }
+
+         function ShowOriginData() {
+            var selected_version = [];
+            selected_version.push('{{ selected_version }}');
+            formSelects.value('version', selected_version);
             }
 
         //清除提示信息
         function ClearMSG(nid) {
             setTimeout(function () {
-                $("#"+nid).text('')
+                $("#"+nid).text('');
+                window.location.reload();
             }, 3000);
         }
     </script>
