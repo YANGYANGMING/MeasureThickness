@@ -20,8 +20,10 @@
             <table class="layui-table layui-form">
                 <thead>
                     <tr>
+                        <th style="width: 80px">编辑标签</th>
                         <th style="width: 20px">ID</th>
                         <th>数据集筛选条件</th>
+                        <th>数据集标签</th>
                         <th style="width: 300px">操作</th>
                         <th style="width: 80px">详细数据</th>
                     </tr>
@@ -71,9 +73,12 @@
                     $.each(data_list, function (k, v) {
                         var nid = v.id;
                         var time_and_id = v.time_and_id;
+                        var dataset_tag = v.dataset_tag;
                         html += "<tr>";
+                        html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
                         html += "<td>" + nid + "</td>";
                         html += "<td>" + time_and_id + "</td>";
+                        html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"dataset-tag\">" + dataset_tag + "</td>";
                         html += "<td>";
                         html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn\" onclick=\"RunAlg(this)\">跑算法</button>";
                         html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn layui-btn-danger\" onclick=\"RemoveDataSet(this)\">删除数据集</button>";
@@ -112,7 +117,7 @@
             var version = formSelects.value('version', 'valStr');
             console.log('2', version);
             var $td = $(ths).parent().parent().children();
-            var nid = $td.eq(0).text();
+            var nid = $td.eq(1).text();
             console.log(nid);
             $.ajax({
                 url: '/thickness/dataset-run-alg-ajax/',
@@ -134,14 +139,13 @@
             }
         //删除数据集
         function RemoveDataSet(ths) {
-
             layer.msg('确定删除？', {
               time: 0 //不自动关闭
               ,btn: ['删除', '取消']
               ,yes: function(index){
                 layer.close(index);
                 var $td = $(ths).parent().parent().children();
-                var nid = $td.eq(0).text();
+                var nid = $td.eq(1).text();
                 console.log(nid);
                 $.ajax({
                     url: '/thickness/remove-dataset-ajax/',
@@ -185,6 +189,101 @@
             selected_version.push('{{ selected_version }}');
             formSelects.value('version', selected_version);
             }
+
+
+        function bindEditMode(ths){
+                var editing = $(ths).hasClass('layui-btn-warm');
+                // console.log(editing);
+                var $currentTr = $(ths).parent().parent();
+                if(editing){
+                    //退出编辑模式
+                    $(ths).removeClass('layui-btn-warm');
+                    $(ths).text('编辑');
+                    trOutEditMode($currentTr);
+
+                 }else{
+                    //进入编辑模式
+                    $(ths).addClass('layui-btn-warm');
+                    $(ths).text('保存');
+                    //console.log($currentTr);
+                    trIntoEditMode($currentTr);
+
+                 }
+            }
+
+         function trIntoEditMode($tr){
+            //进入编辑
+            $tr.addClass('success');
+            var nid = $tr.children().eq(1).html();
+            //console.log(nid);
+            $tr.children().each(function () {
+                //$(this) = td
+                var editEnable = $(this).attr('edit-enable');
+                var editType = $(this).attr('edit-Type');
+                var editId = $(this).attr('id');
+                if(editEnable === 'true'){
+                    if(editType === 'input'){
+                        //文本框
+                        var innerText = $(this).text();
+                        var input = document.createElement('input');
+                        input.className = 'layui-input';
+                        input.value = innerText;
+                        input.id = editId;
+                        $(this).html(input);
+
+                    }
+                }
+            })
+        }
+
+        function trOutEditMode($tr){
+            //退出编辑并保存
+            $tr.removeClass('success');
+            var nid = $tr.children().eq(1).html();
+            var fd = new FormData();
+            fd.append('nid', nid);
+            $tr.children().each(function () {
+                //$(this) = td
+                var editEnable = $(this).attr('edit-enable');
+                var editType = $(this).attr('edit-Type');
+                var editId = $(this).attr('id');   //dataset-tag
+                if(editEnable === 'true'){
+                    if(editType === 'input'){
+                        var $input = $(this).children().first();
+                        var inputValue = $input.val();
+                        $(this).html(inputValue);
+                        fd.append(editId, inputValue);
+                    }
+                }
+            });
+            //console.log(fd);
+                $.ajax({
+                    url:'/thickness/save-dataset-tag-ajax/',
+                    dataType:'JSON',
+                    type:'POST',
+                    data: fd,
+                    processData : false, // 使数据不做处理
+                    contentType : false, // 不要设置Content-Type请求头
+                    success: function(arg){
+                        if(arg.status){
+                            $tr.children().each(function () {
+                                //$(this) = td
+                                var editEnable = $(this).attr('edit-enable');
+                                var editType = $(this).attr('edit-Type');
+                                if(editEnable === 'true'){
+                                    if(editType === 'file'){
+                                        //图片
+                                        var img = document.createElement('img');
+                                        img.src = arg.message;
+                                        $(this).html(img)
+                                    }
+                                }
+                            })
+                        }
+                }
+            });
+        }
+
 
         //清除提示信息
         function ClearMSG(nid) {

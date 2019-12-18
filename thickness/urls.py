@@ -16,10 +16,14 @@ urlpatterns = [
     re_path(r'^single-file-data/(\d+)/(.*)$', DataSet.single_file_data, name='single_file_data'),
     re_path(r'^single-file-run-alg-ajax/$', DataSet.single_file_run_alg_ajax),
     re_path(r'^select-version-ajax/$', DataSet.select_version_ajax),
+    re_path(r'^batch-save-true-thickness-ajax/$', DataSet.batch_save_true_thickness_ajax),
+    re_path(r'^remove-data-ajax/$', DataSet.remove_data_ajax),
 
-    re_path(r'^generate-dataset/$', DataSet.GenerateDataSetView.as_view()),
+    re_path(r'^generate-dataset-by-time/$', DataSet.GenerateDataSetView.as_view()),
+    re_path(r'^generate-dataset-by-file-ajax/$', DataSet.generate_dataset_by_file_ajax),
 
     re_path(r'^dataset-condition-list/$', DataSet.dataset_condition_list),
+    re_path(r'^save-dataset-tag-ajax/$', DataSet.save_dataset_tag_ajax),
 
     re_path(r'^generate-dataset-ajax/$', DataSet.generate_dataset_ajax),
 

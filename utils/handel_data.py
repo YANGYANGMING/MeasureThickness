@@ -37,7 +37,6 @@ class HandleDataSet(object):
             data = list(struct.unpack("<%sh" % data_len, message_body_data))
             if len(data) == data_len:
                 thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
-                print(thick_mm)
             else:
                 thick_mm = -19.0
             thickness_dict[data_id_item] = thick_mm

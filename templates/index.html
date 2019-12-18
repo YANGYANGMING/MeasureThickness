@@ -12,7 +12,7 @@
                     <a href="/thickness/dataset-condition-list/">数据集列表</a>
                 </li>
                 <li class="layui-nav-item">
-                    <a href="/thickness/generate-dataset/">生成数据集</a>
+                    <a href="/thickness/generate-dataset-by-time/">按时间生成数据集</a>
                 </li>
             </ul>
             <ul class="layui-nav layui-layout-right">
@@ -31,7 +31,14 @@
                 <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
                 <ul class="layui-nav layui-nav-tree"  lay-filter="test">
                     <li class="layui-nav-item"><a href="/thickness/index/"><i class="layui-icon"></i> 首页</a></li>
-                    <li class="layui-nav-item"><a href="/thickness/generate-dataset/"><i class="fa fa-play" aria-hidden="true"></i> 生成数据集</a></li>
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a class="" href="javascript:;"><i class="fa fa-play" aria-hidden="true"></i> 生成数据集</a>
+                        <dl class="layui-nav-child">
+                            <dd><a href="/thickness/generate-dataset-by-time/" style="margin-left: 20px">按时间生成</a></dd>
+                            <dd><a href="/thickness/generate-dataset-by-file/" style="margin-left: 20px">按文件生成</a></dd>
+                        </dl>
+                    </li>
+{#                    <li class="layui-nav-item"><a href="/thickness/generate-dataset/"><i class="fa fa-play" aria-hidden="true"></i> 生成数据集</a></li>#}
                     <li class="layui-nav-item"><a href="/thickness/dataset-condition-list/"><i class="fa fa-table" aria-hidden="true"></i> 数据集列表</a></li>
                     <li class="layui-nav-item"><a href="/thickness/upload-file/"><i class="fa fa-cloud-upload" aria-hidden="true"></i> 上传文件</a></li>
                     <li class="layui-nav-item"><a href="/thickness/tag-manage/"><i class="fa fa-cloud-upload" aria-hidden="true"></i> 标签管理</a></li>

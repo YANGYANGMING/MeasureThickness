@@ -6,12 +6,18 @@
         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
           <legend>多文件上传列表</legend>
         </fieldset>
+        <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
+        <label id="generate-dataset-by-file-msg" style="color: red;"></label>
+
+        <button style="float: right;" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveFile()">删除选中文件</button>
+        <label id="remove-file-msg" style="color: red; float: right; margin-top: 10px"></label>
 
         <div class="layui-upload">
           <div class="layui-upload-list">
             <table class="layui-table">
               <thead id="table_th">
                 <tr>
+                    <th style="width: 5px">选项</th>
                     <th style="width: 5px">操作</th>
                     <th style="width: 20px">ID</th>
                     <th style="width: 200px">文件名</th>
@@ -62,6 +68,7 @@
                         var true_thickness = v.true_thickness;
                         var version = $('#version').val();
                         html += "<tr>";
+                        html += "<td><input type=\"checkbox\"></td>";
                         html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
                         html += "<td>" + nid + "</td>";
                         html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "/" + version +  "\">" + file_name + "</a></td>";
@@ -96,7 +103,7 @@
 
         function bindEditMode(ths){
                 var editing = $(ths).hasClass('layui-btn-warm');
-                {#console.log(editing);#}
+                // console.log(editing);
                 var $currentTr = $(ths).parent().parent();
                 if(editing){
                     //退出编辑模式
@@ -117,8 +124,8 @@
          function trIntoEditMode($tr){
             //进入编辑
             $tr.addClass('success');
-            var nid = $tr.children().eq(1).html();
-            //console.log(nid);
+            var nid = $tr.children().eq(2).html();
+            console.log(nid);
             $tr.children().each(function () {
                 //$(this) = td
                 var editEnable = $(this).attr('edit-enable');
@@ -147,9 +154,8 @@
 
         function trOutEditMode($tr){
             //退出编辑并保存
-
             $tr.removeClass('success');
-            var nid = $tr.children().eq(1).html();
+            var nid = $tr.children().eq(2).html();
             var fd = new FormData();
             fd.append('nid', nid);
             $tr.children().each(function () {
@@ -197,6 +203,27 @@
             });
         }
 
+        //生成数据集
+        function GenerateDataSetByFile() {
+            var selected_data_id_list = [];
+            $('#table_tb').find(':checkbox').each(function () {
+                if ($(this).prop('checked')){
+                    var nid = $(this).parent().parent().children().eq(2).html();
+                    selected_data_id_list.push(nid);
+                }
+            });
+            $.ajax({
+                url: '/thickness/generate-dataset-by-file-ajax/',
+                type: 'POST',
+                data:  {'selected_data_id_list': JSON.stringify(selected_data_id_list)},
+                dataType: 'JSON',
+                success: function (arg) {
+                    $('#generate-dataset-by-file-msg').text(arg.message);
+                    ClearMSG('generate-dataset-by-file-msg');
+                }
+            })
+        }
+
         function ShowBigImage(ths) {
                  var id = $(ths).parent().attr('id');
                  //console.log(id);
@@ -208,7 +235,13 @@
                  });
             }
 
-
+        //清除提示信息
+        function ClearMSG(nid) {
+            setTimeout(function () {
+                $("#"+nid).text('');
+                //window.location.reload();
+            }, 3000);
+        }
 
 
     </script>

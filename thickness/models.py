@@ -18,7 +18,7 @@ class DataSetCondition(models.Model):
     create_time = models.DateField(auto_now_add=True)
     time_and_id = models.TextField(blank=True, null=True)
     data_set_id = models.TextField(blank=True, null=True)
-    thickness = models.TextField(blank=True, null=True)
+    dataset_tag = models.TextField(blank=True, null=True)
 
 
 class DataTag(models.Model):

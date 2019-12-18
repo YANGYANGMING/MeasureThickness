@@ -20,9 +20,20 @@
                 <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
                 <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="RunAlg()">跑算法</button>
                 <label id="run-alg-msg" style="color: red;"></label>
-                <table class="layui-table layui-form">
+
+                <label for="true-thickness" style="margin-left: 200px;">手测厚度值：</label>
+                <div class="layui-input-inline" style="width: 100px;">
+                    <input type="text" id="true-thickness" class="layui-input" placeholder="厚度值">
+                </div>
+                <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="BatchSaveTrueThickness()">保存手测厚度</button>
+                <label id="batch-save-msg" style="color: red;"></label>
+
+                <button style="float: right;" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveData()">删除选中数据</button>
+                <label id="remove-data-msg" style="color: red; float: right; margin-top: 10px"></label>
+                <table class="layui-table">
                     <thead>
                         <tr>
+                            <th>选项</th>
                             <th>数据ID</th>
                             <th>版本号</th>
                             <th>跑算法的厚度值(mm)</th>
@@ -76,6 +87,7 @@
                             var run_alg_thickness = v.run_alg_thickness;
                             var true_thickness = v.true_thickness;
                             html += "<tr>";
+                            html += "<td><input type=\"checkbox\"></td>";
                             html += "<td>" + nid + "</td>";
                             html += "<td>" + version + "</td>";
                             html += "<td>" + run_alg_thickness + "</td>";
@@ -127,13 +139,8 @@
                 dataType: 'JSON',
                 success: function (arg) {
                     layer.closeAll('loading'); //关闭loading
-                    if(arg.status){
-                            $('#run-alg-msg').text(arg.message);
-                            ClearMSG('run-alg-msg');
-                        }else{
-                            $('#run-alg-msg').text(arg.message);
-                            ClearMSG('run-alg-msg');
-                        }
+                    $('#run-alg-msg').text(arg.message);
+                    ClearMSG('run-alg-msg');
                 }
             })
 
@@ -163,6 +170,57 @@
             formSelects.value('version', selected_version);
         }
 
+        //手测厚度批量赋值
+        function BatchSaveTrueThickness() {
+            var selected_data_id_list = [];
+            var true_thickness = $('#true-thickness').val();
+            $('#tb-list').find(':checkbox').each(function () {
+                if ($(this).prop('checked')){
+                    var nid = $(this).parent().parent().children().eq(1).html();
+                    selected_data_id_list.push(nid)
+                }
+            });
+            $.ajax({
+                url: '/thickness/batch-save-true-thickness-ajax/',
+                type: 'POST',
+                data:  {'selected_data_id_list': JSON.stringify(selected_data_id_list),
+                        'true_thickness': true_thickness,
+                },
+                dataType: 'JSON',
+                success: function (arg) {
+                    $('#batch-save-msg').text(arg.message);
+                    ClearMSG('batch-save-msg');
+                }
+            })
+        }
+
+        //删除选中数据
+        function RemoveData() {
+            layer.msg('确定删除？', {
+              time: 0 //不自动关闭
+              ,btn: ['删除', '取消']
+              ,yes: function(index){
+                layer.close(index);
+                var selected_data_id_list = [];
+                $('#tb-list').find(':checkbox').each(function () {
+                    if ($(this).prop('checked')){
+                        var nid = $(this).parent().parent().children().eq(1).html();
+                        selected_data_id_list.push(nid)
+                    }
+                });
+                $.ajax({
+                    url: '/thickness/remove-data-ajax/',
+                    type: 'POST',
+                    data:  {'selected_data_id_list': JSON.stringify(selected_data_id_list)},
+                    dataType: 'JSON',
+                    success: function (arg) {
+                        $('#remove-data-msg').text(arg.message);
+                        ClearMSG('remove-data-msg');
+                    }
+                })
+                }
+            });
+        }
 
         //清除提示信息
         function ClearMSG(id) {
