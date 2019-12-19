@@ -169,10 +169,10 @@ b = "2225,2891,4087,1082,0,0,1877,4089,4089,4089,1761,0,0,0,0,4066,4089,4089,408
 # dic = {'status': True, 'data_list': [{'time': '2019-11-15', 'data_id': 4, 'thickness': ''}, {'time': '2019-11-15', 'data_id': 5, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 1, 'thickness': ''}, {'time': '2019-11-08', 'data_id': 2, 'thickness': ''}]}
 #
 # print(json.dumps(dic))
-data_obj = models.DataFile.objects.filter(file_name_id=5).all()
-print(data_obj)
-lists = []
-for i in data_obj:
-    vt = list(i.versiontothcikness_set.values('data_id', 'run_alg_thickness'))
-    lists.append(vt)
-print(lists)
+# data_obj = models.VersionToThcikness.objects.filter(data_id=12, version='2').values('data_id', 'version__version', 'run_alg_thickness')[0]
+# print(data_obj)
+deviation_num = []
+deviation_range = {0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
+deviation_num.append([v for k, v in deviation_range.items()])
+print(deviation_num)
+

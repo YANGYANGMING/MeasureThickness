@@ -33,7 +33,7 @@
                 <table class="layui-table">
                     <thead>
                         <tr>
-                            <th>选项</th>
+                            <th style="width: 30px">选项</th>
                             <th>数据ID</th>
                             <th>版本号</th>
                             <th>跑算法的厚度值(mm)</th>
@@ -64,7 +64,7 @@
          });
 
         var curr_page = 1;
-        var limit = 14;
+        var limit = 10;
         var total = $('#total-count').val();
         var file_id = $('#file-id').val();
         var version = $('#latest-version').val();
@@ -92,6 +92,7 @@
                             html += "<td>" + version + "</td>";
                             html += "<td>" + run_alg_thickness + "</td>";
                             html += "<td>" + true_thickness + "</td>";
+                            console.log(run_alg_thickness);
                             if(run_alg_thickness === null){
                                 html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\">数据波形</a></td>";
                             }else{
@@ -105,15 +106,15 @@
             }
 
             function getPage() {
-                limits = [14, 20, 30, 40, 50];
-                limit = 14;
+                //limits = [14, 20, 30, 40, 50];
+                //limit = 14;
                 layui.use(['laypage'], function() {
                     var laypage = layui.laypage;
                     laypage.render({
                         elem: 'pager-id'
                         ,count: total
-                        ,limits: limits
-                        ,limit: limit
+                        //,limits: limits
+                        //,limit: limit
                         ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
                         ,jump: function(obj, first){
                             curr_page = obj.curr; //当前页

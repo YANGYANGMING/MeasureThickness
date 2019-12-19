@@ -131,10 +131,13 @@ def single_file_data(request, nid, version):
     #print(data_obj)
     single_file_obj = []
     for item in data_obj:
-        vt = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
-        true_thickness = models.DataFile.objects.values('true_thickness').get(nid=vt['data_id'])['true_thickness']
-        vt['true_thickness'] = true_thickness
-        single_file_obj.append(vt)
+        try:
+            vt = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
+            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=vt['data_id'])['true_thickness']
+            vt['true_thickness'] = true_thickness
+            single_file_obj.append(vt)
+        except Exception as e:
+            print(e)
     count = len(single_file_obj)
     try:
         file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
@@ -550,7 +553,7 @@ class DeviationRate(View):
 
     def get(self, request, *args, **kwargs):
         version_obj = models.Version.objects.values('version').order_by('-id')
-        nid = args[0]
+        nid = args[0]  # 数据集id
         return render(request, 'thickness/deviation_rate.html', locals())
 
     # def post(self, request, *args, **kwargs):
@@ -561,13 +564,46 @@ class DeviationRate(View):
 @csrf_exempt
 def deviation_rate_ajax(request, nid):
     """偏差率ajax"""
-    result = {'status': False, 'message': ''}
-    dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
-    dataset_id_list.sort()
-    print(dataset_id_list)
-    # for item in dataset_id_list:
+    try:
+        data_list = []
+        selected_version_list = request.POST.get('version').split(',')
+        dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
+        dataset_id_list.sort()
+        # print(dataset_id_list)
+        # print(selected_version_list)
 
+        for version_item in selected_version_list:
+            deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
+            data_id_and_deviation = {}
+            data_id_and_devation_dict = {}
+            for data_id in dataset_id_list:
+                try:
+                    data_obj = models.DataFile.objects.get(nid=data_id)
+                    true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+                    run_alg_thickness = data_obj.versiontothcikness_set.filter(version__version=version_item).values('run_alg_thickness')[0]['run_alg_thickness']
+                    deviation_temp = abs(true_thickness - run_alg_thickness)
+                    deviation = export_result(deviation_temp)  # 保留一位小数
+                    data_id_and_deviation[data_id] = deviation
 
+                except Exception as e:
+                    print(e)
+            data_id_and_devation_dict[version_item] = data_id_and_deviation
+            print(data_id_and_devation_dict)
+            for k_data_id, v_deviation_item in data_id_and_devation_dict[version_item].items():
+                judge_range = deviation_range.get(v_deviation_item)
+                if judge_range or judge_range == 0:
+                    deviation_range[v_deviation_item] = deviation_range[v_deviation_item] + 1
+                else:
+                    deviation_range[1.0] = deviation_range[1.0] + 1
+            print(deviation_range)
+            deviation_num = [v for k, v in deviation_range.items()]
+            data_list.append({'name': version_item, 'data': deviation_num})
+        print(data_list)
+
+        result = {'status': True, 'message': 'success', 'data_list': data_list}
+    except Exception as e:
+        print(e)
+        result = {'status': False, 'message': 'false', 'data_list': []}
 
     return HttpResponse(json.dumps(result))
 
@@ -621,3 +657,9 @@ def test(request):
     #     print(file.size)
     # return HttpResponse('...')
     return render(request, 'test.html')
+
+def export_result(num):
+    """不四舍五入保留1位小数"""
+    num_x, num_y = str(num).split('.')
+    num = float(num_x + '.' + num_y[0:1])
+    return num

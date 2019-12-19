@@ -170,7 +170,6 @@
         //选择版本并显示已选版本的数据信息
         function SelectVersion() {
             var version = formSelects.value('version', 'valStr');
-            console.log('3', version);
             $.ajax({
                 url: '/thickness/select-version-ajax/',
                 type: 'POST',
@@ -181,7 +180,6 @@
                     }
                 }
             })
-
         }
 
          function ShowOriginData() {
