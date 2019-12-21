@@ -7,15 +7,39 @@
         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
           <legend>偏差率柱状图</legend>
         </fieldset>
-    <div id="container" style="min-width:400px;height:400px"></div>
-    <div class="layui-input-inline" style="width: 150px;">
-        <select style="margin-left: 20px;" name="version" xm-select="version">
-            {% for i in version_obj %}
-                <option value="{{ i.version }}">{{ i.version }}</option>
-            {% endfor %}
-        </select>
+        <div id="container" style="min-width:400px;height:400px"></div>
+
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+          <legend>选择版本号</legend>
+        </fieldset>
+        <div class="layui-input-inline" style="width: 300px;">
+            <select style="margin-left: 20px;" name="version" xm-select="version">
+                {% for i in version_obj %}
+                    <option value="{{ i.version }}">{{ i.version }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
+
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+             <legend>选择树状图数据详情</legend>
+        </fieldset>
+        <div class="layui-field-box">
+            <table class="layui-table layui-form">
+                <thead>
+                    <tr>
+                        <th>数据ID</th>
+                        <th>版本号</th>
+                        <th>跑算法得出厚度值(mm)</th>
+                        <th>手测厚度值(mm)</th>
+                        <th>波形图</th>
+                    </tr>
+                </thead>
+                <tbody id="tb-list">
+                </tbody>
+            </table>
+        </div>
     </div>
-    <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
 
     <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
     <script>
@@ -42,7 +66,7 @@
                 },
                 xAxis: {
                     categories: [
-                        '0.0-0.1','0.1-0.2','0.2-0.3','0.3-0.4','0.4-0.5','0.5-0.6','0.6-0.7','0.7-0.8','0.8-0.9','0.9-1.0','>=1.0'
+                        '0.0-0.1','0.1-0.2','0.2-0.3','0.3-0.4','0.4-0.5','0.5-0.6','0.6-0.7','0.7-0.8','0.8-0.9','0.9-1.0','1.0-+oo'
                     ],
                     title: {
                         text: '偏差量'
@@ -61,20 +85,53 @@
                 plotOptions: {
                     column: {
                         borderWidth: 0
+                    },
+                    series: {
+                        cursor: 'pointer',
+                        events: {
+                            click:function (event) {
+                                let version = event.point.series.name;
+                                let deviation = event.point.category;
+                                $.ajax({
+                                    url: '/thickness/column-click-event-ajax/{{ nid }}/',
+                                    type: 'POST',
+                                    data: {'version': version, 'deviation': deviation},
+                                    dataType: 'JSON',
+                                    success: function (arg) {
+                                        if (arg.status){
+                                            var data_list = arg.data_list;
+                                            var html = '';
+                                            $.each(data_list, function (k, v) {
+                                                var data_id = v.data_id;
+                                                var version = v.version;
+                                                var run_alg_thickness = v.run_alg_thickness;
+                                                var true_thickness = v.true_thickness;
+                                                html += "<tr>";
+                                                html += "<td>" + data_id + "</td>";
+                                                html += "<td>" + version + "</td>";
+                                                html += "<td>" + run_alg_thickness + "</td>";
+                                                html += "<td>" + true_thickness + "</td>";
+                                                if(run_alg_thickness === null){
+                                                    html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/-1.0\" target=\"_blank\">数据波形</a></td>";
+                                                }else{
+                                                    html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + run_alg_thickness + "\" target=\"_blank\">数据波形</a></td>";
+                                                }
+                                                html += "</tr>";
+                                            });
+                                            $("#tb-list").empty().append(html); //页面填充
+
+                                        }else{
+                                            console.log(arg.message);
+                                            SelectVersion();
+                                        }
+                                    }
+                                })
+
+                            }
+                        }
                     }
                 },
-                series: [
-                {#    {#}
-                {#    name: 'V-3.0',#}
-                {#    data: [1, 3, 2, 1, 1, 0, 1, 1, 0, 0, 0]#}
-                {# }, {#}
-                {#    name: 'V-2.0',#}
-                {#    data: [2, 2, 1, 0, 1, 2, 1, 1, 0, 0, 0]#}
-                {# },{#}
-                {#    name: 'V-1.0',#}
-                {#    data: [1, 1, 3, 2, 1, 0, 1, 1, 0, 0, 0]#}
-                {# }#}
-                ]
+                series: []
             };
             $('#container').highcharts(chart);
         }

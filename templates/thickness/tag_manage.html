@@ -9,6 +9,12 @@
         <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
         <label id="generate-dataset-by-file-msg" style="color: red;"></label>
 
+
+        <div style="margin-left: 100px; width: 300px; display: inline-block;">
+            <input id="file-tag" class="layui-input" type="search" placeholder="文件描述">
+        </div>
+        <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="SearchTag()">搜索</button>
+
         <button style="float: right;" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveFile()">删除选中文件</button>
         <label id="remove-file-msg" style="color: red; float: right; margin-top: 10px"></label>
 
@@ -17,7 +23,7 @@
             <table class="layui-table">
               <thead id="table_th">
                 <tr>
-                    <th style="width: 30px">选项</th>
+                    <th style="width: 30px"><input class="layui-form-checkbox" lay-skin="primary" type="checkbox" onclick="SelectAll(this)"></th>
                     <th style="width: 5px">操作</th>
                     <th style="width: 20px">ID</th>
                     <th style="width: 200px">文件名</th>
@@ -50,7 +56,7 @@
 
         function loadData() {
             $.ajax({
-                url: '/thickness/tag-manage-ajax/',
+                url: '/thickness/tag-manage/',
                 type: "POST",
                 data: {
                     'curr_page': curr_page,
@@ -59,25 +65,7 @@
                 dataType: "JSON",
                 success:function (ret) {
                     var data_list = ret.data_list;
-                    var html = '';
-                    $.each(data_list, function (k, v) {
-                        var nid = v.id;
-                        var file_name = v.file_name;
-                        var img_path = v.img_path;
-                        var file_explain = v.file_explain;
-                        var true_thickness = v.true_thickness;
-                        var version = $('#version').val();
-                        html += "<tr>";
-                        html += "<td><input type=\"checkbox\"></td>";
-                        html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
-                        html += "<td>" + nid + "</td>";
-                        html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "/" + version +  "\">" + file_name + "</a></td>";
-                        html += "<td edit-enable=\"true\" edit-type=\"file\" id=\"show-img-" + nid + "\"><img src=\"" + img_path + "\" onclick=\"ShowBigImage(this)\"></td>";
-                        html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"true-thickness\">" + true_thickness + "</td>";
-                        html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"file-explain\">" + file_explain + "</td>";
-                        html += "</tr>";
-                    });
-                    $("#table_tb").empty().append(html); //页面填充
+                    RenderHTML(data_list);
                     }
                 });
             }
@@ -93,7 +81,7 @@
                             curr_page = obj.curr; //当前页
                             limit = obj.limit;   //每页显示的条数
                             if(!first){
-                                loadData()
+                                loadData();
                                 }
                             }
                           });
@@ -176,29 +164,29 @@
                 }
             });
             //console.log(fd);
-                $.ajax({
-                    url:'/thickness/tag-manage/',
-                    dataType:'JSON',
-                    type:'POST',
-                    data: fd,
-                    processData : false, // 使数据不做处理
-                    contentType : false, // 不要设置Content-Type请求头
-                    success: function(arg){
-                        if(arg.status){
-                            $tr.children().each(function () {
-                                //$(this) = td
-                                var editEnable = $(this).attr('edit-enable');
-                                var editType = $(this).attr('edit-Type');
-                                if(editEnable === 'true'){
-                                    if(editType === 'file'){
-                                        //图片
-                                        var img = document.createElement('img');
-                                        img.src = arg.message;
-                                        $(this).html(img)
-                                    }
+            $.ajax({
+                url:'/thickness/tag-manage-save-ajax/',
+                dataType:'JSON',
+                type:'POST',
+                data: fd,
+                processData : false, // 使数据不做处理
+                contentType : false, // 不要设置Content-Type请求头
+                success: function(arg){
+                    if(arg.status){
+                        $tr.children().each(function () {
+                            //$(this) = td
+                            var editEnable = $(this).attr('edit-enable');
+                            var editType = $(this).attr('edit-Type');
+                            if(editEnable === 'true'){
+                                if(editType === 'file'){
+                                    //图片
+                                    var img = document.createElement('img');
+                                    img.src = arg.message;
+                                    $(this).html(img)
                                 }
-                            })
-                        }
+                            }
+                        })
+                    }
                 }
             });
         }
@@ -224,6 +212,30 @@
             })
         }
 
+        //渲染表格
+        function RenderHTML(data_list) {
+            var html = '';
+            $.each(data_list, function (k, v) {
+                var nid = v.id;
+                var file_name = v.file_name;
+                var img_path = v.img_path;
+                var file_explain = v.file_explain;
+                var true_thickness = v.true_thickness;
+                var version = $('#version').val();  //<div class="layui-unselect layui-form-checkbox" lay-skin="primary"><i class="layui-icon layui-icon-ok"></i></div>
+                html += "<tr>";
+                html += "<td><input class=\"layui-form-checkbox\" lay-skin=\"primary\" type=\"checkbox\"></td>";
+                html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
+                html += "<td>" + nid + "</td>";
+                html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "/" + version +  "\" target=\"_blank\">" + file_name + "</a></td>";
+                html += "<td edit-enable=\"true\" edit-type=\"file\" id=\"show-img-" + nid + "\"><img src=\"" + img_path + "\" onclick=\"ShowBigImage(this)\"></td>";
+                html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"true-thickness\">" + true_thickness + "</td>";
+                html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"file-explain\">" + file_explain + "</td>";
+                html += "</tr>";
+            });
+            $("#table_tb").empty().append(html); //页面填充
+        }
+
+        //显示大图
         function ShowBigImage(ths) {
                  var id = $(ths).parent().attr('id');
                  //console.log(id);
@@ -235,11 +247,74 @@
                  });
             }
 
+        //全选
+        function SelectAll(ths) {
+            var select = $(ths).prop('checked');
+            if (select) {
+                $('#table_tb').find(":checkbox").each(function () {
+                    $(this).prop('checked',true);
+                })
+            }else{
+                $('#table_tb').find(":checkbox").each(function () {
+                    $(this).prop('checked',false);
+                })
+            }
+        }
+
+        //删除文件
+        function RemoveFile() {
+            layer.msg('确定删除？', {
+              time: 0 //不自动关闭
+              ,btn: ['删除', '取消']
+              ,yes: function(index){
+                layer.close(index);
+                var selected_file_id_list = [];
+                $('#table_tb').find(':checkbox').each(function () {
+                    if ($(this).prop('checked')){
+                        var nid = $(this).parent().parent().children().eq(2).html();
+                        selected_file_id_list.push(nid);
+                    }
+                });
+                $.ajax({
+                    url: '/thickness/remove-file-ajax/',
+                    type: 'POST',
+                    data:  {'selected_file_id_list': JSON.stringify(selected_file_id_list)},
+                    dataType: 'JSON',
+                    success: function (arg) {
+                        $('#table_tb').find(':checkbox').each(function () {
+                            if ($(this).prop('checked')){
+                                var $tr = $(this).parent().parent();
+                                $tr.remove()
+                            }
+                        });
+                        $('#remove-file-msg').text(arg.message);
+                        ClearMSG('remove-file-msg');
+                    }
+                })
+                }
+            });
+        }
+
+        //搜索tag
+        function SearchTag() {
+            var search_value = $('#file-tag').val();
+            $.ajax({
+                url: '/thickness/search-tag-ajax/',
+                type: 'POST',
+                data:  {'search_value': search_value},
+                dataType: 'JSON',
+                success: function (arg) {
+                    var data_list = arg['data_list'];
+                    RenderHTML(data_list);
+                    $('#pager-id').remove()
+                }
+            })
+        }
+
         //清除提示信息
         function ClearMSG(nid) {
             setTimeout(function () {
                 $("#"+nid).text('');
-                //window.location.reload();
             }, 3000);
         }
 

@@ -11,7 +11,7 @@ urlpatterns = [
     re_path(r'^upload-file/$', DataSet.UploadFileView.as_view()),
 
     re_path(r'^tag-manage/$', DataSet.tag_manage),
-    re_path(r'^tag-manage-ajax/$', DataSet.tag_manage_ajax),
+    re_path(r'^tag-manage-save-ajax/$', DataSet.tag_manage_save_ajax),
 
     re_path(r'^single-file-data/(\d+)/(.*)$', DataSet.single_file_data, name='single_file_data'),
     re_path(r'^single-file-run-alg-ajax/$', DataSet.single_file_run_alg_ajax),
@@ -21,6 +21,8 @@ urlpatterns = [
 
     re_path(r'^generate-dataset-by-time/$', DataSet.GenerateDataSetView.as_view()),
     re_path(r'^generate-dataset-by-file-ajax/$', DataSet.generate_dataset_by_file_ajax),
+    re_path(r'^remove-file-ajax/$', DataSet.remove_file_ajax),
+    re_path(r'^search-tag-ajax/$', DataSet.search_file_ajax),
 
     re_path(r'^dataset-condition-list/$', DataSet.dataset_condition_list),
     re_path(r'^save-dataset-tag-ajax/$', DataSet.save_dataset_tag_ajax),
@@ -38,6 +40,7 @@ urlpatterns = [
 
     re_path(r'^deviation-rate/(\d+)/$', DataSet.DeviationRate.as_view()),
     re_path(r'^deviation-rate-ajax/(\d+)/$', DataSet.deviation_rate_ajax),
+    re_path(r'^column-click-event-ajax/(\d+)/$', DataSet.column_click_event_ajax),
 
     re_path(r'^test/$', DataSet.test),
 

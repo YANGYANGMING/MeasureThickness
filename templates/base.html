@@ -19,7 +19,11 @@
     <script src="/static/plugins/highcharts/highcharts.js"></script>
     <script src="/static/plugins/highcharts/dark-unica.js"></script>
 
-    {% block extra_css %}{% endblock %}
+    {% block extra_css %}
+        <style>
+            .layui-layout-admin .layui-body{bottom:0}  <!-- 去掉页脚样式 -->
+        </style>
+    {% endblock %}
 </head>
 <body>
 

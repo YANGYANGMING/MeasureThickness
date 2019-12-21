@@ -87,7 +87,7 @@
                             var run_alg_thickness = v.run_alg_thickness;
                             var true_thickness = v.true_thickness;
                             html += "<tr>";
-                            html += "<td><input type=\"checkbox\"></td>";
+                            html += "<td><input class=\"layui-form-checkbox\" lay-skin=\"primary\" type=\"checkbox\"></td>";
                             html += "<td>" + nid + "</td>";
                             html += "<td>" + version + "</td>";
                             html += "<td>" + run_alg_thickness + "</td>";
@@ -191,6 +191,7 @@
                 success: function (arg) {
                     $('#batch-save-msg').text(arg.message);
                     ClearMSG('batch-save-msg');
+                    window.location.reload();
                 }
             })
         }
@@ -217,6 +218,11 @@
                     success: function (arg) {
                         $('#remove-data-msg').text(arg.message);
                         ClearMSG('remove-data-msg');
+                        $('#tb-list').find(':checkbox').each(function () {
+                            if ($(this).prop('checked')){
+                                $(this).parent().parent().remove();
+                            }
+                        });
                     }
                 })
                 }
@@ -227,7 +233,6 @@
         function ClearMSG(id) {
             setTimeout(function () {
                 $('#'+id).text('');
-                window.location.reload();
                 }, 1000);
         }
 

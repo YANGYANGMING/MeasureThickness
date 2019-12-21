@@ -24,8 +24,8 @@
                         <th style="width: 20px">ID</th>
                         <th>数据集筛选条件</th>
                         <th>数据集标签</th>
-                        <th style="width: 300px">操作</th>
                         <th style="width: 80px">详细数据</th>
+                        <th style="width: 300px">操作</th>
                     </tr>
                 </thead>
 
@@ -79,12 +79,12 @@
                         html += "<td>" + nid + "</td>";
                         html += "<td>" + time_and_id + "</td>";
                         html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"dataset-tag\">" + dataset_tag + "</td>";
+                        html += "<td><a href=\"/thickness/single-dataset-list" + "/" + nid + "\">详细数据</a></td>";
                         html += "<td>";
                         html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn\" onclick=\"RunAlg(this)\">跑算法</button>";
                         html += "<button lay-submit=\"\" lay-filter=\"submit\" class=\"layui-btn layui-btn-danger\" onclick=\"RemoveDataSet(this)\">删除数据集</button>";
                         html += "<label id=\"run-alg-msg-" + nid + "\" style=\"color: red;\"></label>";
                         html += "</td>";
-                        html += "<td><a href=\"/thickness/single-dataset-list" + "/" + nid + "\">详细数据</a></td>";
                         html += "</tr>";
                     });
                     $("#tb-list").empty().append(html); //页面填充
@@ -118,7 +118,6 @@
             console.log('2', version);
             var $td = $(ths).parent().parent().children();
             var nid = $td.eq(1).text();
-            console.log(nid);
             $.ajax({
                 url: '/thickness/dataset-run-alg-ajax/',
                 type: 'POST',
@@ -129,7 +128,6 @@
                     if(arg.status){
                             $('#run-alg-msg-'+nid).text(arg.message);
                             ClearMSG('run-alg-msg-'+nid);
-
                         }else{
                             $('#run-alg-msg-'+nid).text(arg.message);
                             ClearMSG('run-alg-msg-'+nid);
@@ -146,7 +144,6 @@
                 layer.close(index);
                 var $td = $(ths).parent().parent().children();
                 var nid = $td.eq(1).text();
-                console.log(nid);
                 $.ajax({
                     url: '/thickness/remove-dataset-ajax/',
                     type: 'POST',
@@ -156,7 +153,7 @@
                         if(arg.status){
                                 $('#run-alg-msg-'+nid).text(arg.message);
                                 ClearMSG('run-alg-msg-'+nid);
-                                window.location.reload();
+                                $(ths).parent().parent().remove()
                             }else{
                                 $('#run-alg-msg-'+nid).text(arg.message);
                                 ClearMSG('run-alg-msg-'+nid);
@@ -287,7 +284,6 @@
         function ClearMSG(nid) {
             setTimeout(function () {
                 $("#"+nid).text('');
-                window.location.reload();
             }, 3000);
         }
     </script>

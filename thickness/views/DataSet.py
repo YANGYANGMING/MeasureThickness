@@ -3,6 +3,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.safestring import mark_safe
+from django.db.models import Q
+from django.core.cache import cache
 from MeasureThickness.settings import Base_img_path
 from utils.handel_data import *
 from utils.layui_pager import LayuiPager
@@ -19,73 +21,67 @@ file_count = 0
 @csrf_exempt
 def tag_manage(request):
     """标签管理"""
+    version = models.Version.objects.values('version').last()['version']
+    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
+
+    count = len(file_tag_obj)
+    for item in file_tag_obj:
+        file_id = item['id']
+        true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
+            'true_thickness']
+        item['true_thickness'] = true_thickness
+        if item['tag_content']:
+            tag_content_dict = eval(item['tag_content'])
+            item['file_explain'] = tag_content_dict['file_explain']
+            item['img_path'] = tag_content_dict['img_path']
     if request.method == "GET":
-        version = models.Version.objects.values('version').last()['version']
-        file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
-        count = len(file_tag_obj)
-        for item in file_tag_obj:
-            if item['tag_content']:
-                tag_content_dict = eval(item['tag_content'])
-                item['file_explain'] = tag_content_dict['file_explain']
-                item['img_path'] = tag_content_dict['img_path']
+
         return render(request, "thickness/tag_manage.html", locals())
 
     if request.method == "POST":
-        result = {'status': False, 'message': None}
-        try:
-            true_thickness = request.POST.get('true-thickness')
-            file_explain = request.POST.get('file-explain')
-            nid = request.POST.get('nid')
-            img_obj = request.FILES.get('img_obj')
-            tag_content = models.DataTag.objects.values('tag_content').filter(id=nid)[0]['tag_content']
-            if tag_content:
-                tag_content = eval(tag_content)
-                old_img_path = tag_content['img_path']
-            else:
-                tag_content = {}
-                old_img_path = ''
-            if img_obj:
-                # 写 && 压缩 图片
-                with open(Base_img_path + img_obj.name, 'wb') as f:
-                    f.write(img_obj.read())
-                handleimgs.compress_image(Base_img_path + img_obj.name)
-
-                tag_content['file_explain'] = file_explain
-                tag_content['img_path'] = '/' + Base_img_path + img_obj.name
-            else:
-                tag_content['file_explain'] = file_explain
-                tag_content['img_path'] = old_img_path
-
-            # if true_thickness == None:
-            models.DataFile.objects.filter(file_name=nid).update(true_thickness=true_thickness)
-            models.DataTag.objects.filter(id=nid).update(tag_content=tag_content)
-            result = {'status': True, 'message': tag_content['img_path']}
-        except Exception as e:
-            print(e, '上传失败')
-
-        return HttpResponse(json.dumps(result))
-
-@csrf_exempt
-def tag_manage_ajax(request):
-    """标签管理分页"""
-    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
-    for item in file_tag_obj:
-        try:
-            file_id = item['id']
-            true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0]['true_thickness']
-            item['true_thickness'] = true_thickness
-            if item['tag_content']:
-                tag_content_dict = eval(item['tag_content'])
-                item['file_explain'] = tag_content_dict['file_explain']
-                item['img_path'] = tag_content_dict['img_path']
-        except Exception as e:
-            print(e)
-    if request.method == "POST":
-
         layui_pager = LayuiPager(request, file_tag_obj)
         result = layui_pager.pager()
 
         return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def tag_manage_save_ajax(request):
+    """退出保存"""
+    result = {'status': False, 'message': None}
+    try:
+        true_thickness = request.POST.get('true-thickness')
+        if true_thickness == 'null' or true_thickness == '':
+            true_thickness = 0
+        file_explain = request.POST.get('file-explain')
+        nid = request.POST.get('nid')
+        img_obj = request.FILES.get('img_obj')
+        tag_content = models.DataTag.objects.values('tag_content').filter(id=nid)[0]['tag_content']
+        if tag_content:
+            tag_content = eval(tag_content)
+            old_img_path = tag_content['img_path']
+        else:
+            tag_content = {}
+            old_img_path = ''
+        if img_obj:
+            # 写 && 压缩 图片
+            with open(Base_img_path + img_obj.name, 'wb') as f:
+                f.write(img_obj.read())
+            handleimgs.compress_image(Base_img_path + img_obj.name)
+
+            tag_content['file_explain'] = file_explain
+            tag_content['img_path'] = '/' + Base_img_path + img_obj.name
+        else:
+            tag_content['file_explain'] = file_explain
+            tag_content['img_path'] = old_img_path
+
+        models.DataFile.objects.filter(file_name=nid).update(true_thickness=true_thickness)
+        models.DataTag.objects.filter(id=nid).update(tag_content=tag_content)
+        result = {'status': True, 'message': tag_content['img_path']}
+    except Exception as e:
+        print(e, '上传失败')
+
+    return HttpResponse(json.dumps(result))
 
 
 @csrf_exempt
@@ -113,6 +109,53 @@ def generate_dataset_by_file_ajax(request):
             result = {'status': False, 'message': '生成数据集失败'}
     except Exception as e:
         result = {'status': False, 'message': '生成数据集失败'}
+        print(e)
+
+    return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def remove_file_ajax(request):
+    """删除文件"""
+    try:
+        selected_file_id_list = eval(request.POST.get('selected_file_id_list'))
+        if selected_file_id_list:
+            for file_id in selected_file_id_list:
+                models.DataTag.objects.filter(id=file_id).delete()
+
+        result = {'status': True, 'message': '删除文件成功'}
+
+    except Exception as e:
+        result = {'status': False, 'message': '删除文件失败'}
+        print(e)
+
+    return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def search_file_ajax(request):
+    """按文件tag搜索"""
+    try:
+        search_value = request.POST.get('search_value')
+        q = Q()
+        q.connector = "OR"
+        q.children.append(("tag_content__contains", search_value))
+        search_obj = list(models.DataTag.objects.filter(q).values('id', 'file_name', 'tag_content').order_by('-id'))
+        for item in search_obj:
+            file_id = item['id']
+            true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
+                'true_thickness']
+            item['true_thickness'] = true_thickness
+            if item['tag_content']:
+                tag_content_dict = eval(item['tag_content'])
+                item['file_explain'] = tag_content_dict['file_explain']
+                item['img_path'] = tag_content_dict['img_path']
+        print(search_obj)
+
+        result = {'status': True, 'message': 'success', 'data_list': search_obj}
+
+    except Exception as e:
+        result = {'status': False, 'message': 'fail', 'data_list': []}
         print(e)
 
     return HttpResponse(json.dumps(result))
@@ -240,20 +283,19 @@ def single_dataset_list(request, nid):
     # 填充列表
     data_list = []
     for item in data_time:
-        for i in range(int(item[1]), int(item[2])+1):  # 数据集中单个日期的数据id范围  [20, 67]
+        for data_id in range(int(item[1]), int(item[2])+1):  # 数据集中单个日期的数据id范围  [20, 67]
             try:  # 防止删除了文件中的某条数据，导致报错
-                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=i)['true_thickness']
-                data_obj = models.DataFile.objects.get(nid=i)
+                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+                data_obj = models.DataFile.objects.get(nid=data_id)
                 run_alg_thickness_obj = data_obj.versiontothcikness_set.filter(version__version=selected_version).values('run_alg_thickness')
                 if run_alg_thickness_obj:   # 如果该数据已跑算法，取出算法厚度值
                     run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
                 else:
                     run_alg_thickness = None
                 time = item[0]
-                data_id = i
                 data_list.append({'time': time, 'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})  #[{'time': '2019-09-20', 'data_id': 4, 'thickness': 39.028}, {'time': '2019-09-20', 'data_id': 5, 'thickness': 40.058}, {'time': '2019-09-20', 'data_id': 6, 'thickness': 38.012}]
             except Exception as e:
-                print(e)
+                pass
     count = len(data_list)
 
     if request.method == "GET":
@@ -322,7 +364,7 @@ def batch_save_true_thickness_ajax(request):
         result = {'status': True, 'message': '批量设置成功'}
     except Exception as e:
         result = {'status': False, 'message': '厚度值类型错误，正确类型为：浮点型'}
-        print(e)
+        # print(e)
     return HttpResponse(json.dumps(result))
 
 
@@ -337,7 +379,7 @@ def remove_data_ajax(request):
         result = {'status': True, 'message': '删除成功'}
     except Exception as e:
         result = {'status': False, 'message': '删除失败'}
-        print(e)
+        # print(e)
     return HttpResponse(json.dumps(result))
 
 
@@ -556,10 +598,6 @@ class DeviationRate(View):
         nid = args[0]  # 数据集id
         return render(request, 'thickness/deviation_rate.html', locals())
 
-    # def post(self, request, *args, **kwargs):
-    #     result = {'status': False, 'message': ''}
-    #
-    #     return HttpResponse(json.dumps(result))
 
 @csrf_exempt
 def deviation_rate_ajax(request, nid):
@@ -569,10 +607,14 @@ def deviation_rate_ajax(request, nid):
         selected_version_list = request.POST.get('version').split(',')
         dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
         dataset_id_list.sort()
-        # print(dataset_id_list)
-        # print(selected_version_list)
 
         for version_item in selected_version_list:
+            # 查看是否有缓存
+            # data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version_item + '_' + nid)
+            # deviation_range = cache.get('deviation_range_' + version_item + '_' + nid)
+            # if data_id_and_devation_dict and deviation_range:  # 走缓存
+            #     pass
+            # else:  # 从数据将取数并设置缓存
             deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
             data_id_and_deviation = {}
             data_id_and_devation_dict = {}
@@ -584,26 +626,68 @@ def deviation_rate_ajax(request, nid):
                     deviation_temp = abs(true_thickness - run_alg_thickness)
                     deviation = export_result(deviation_temp)  # 保留一位小数
                     data_id_and_deviation[data_id] = deviation
-
-                except Exception as e:
-                    print(e)
+                except:
+                    pass
             data_id_and_devation_dict[version_item] = data_id_and_deviation
-            print(data_id_and_devation_dict)
+            # print(data_id_and_devation_dict)
             for k_data_id, v_deviation_item in data_id_and_devation_dict[version_item].items():
                 judge_range = deviation_range.get(v_deviation_item)
                 if judge_range or judge_range == 0:
                     deviation_range[v_deviation_item] = deviation_range[v_deviation_item] + 1
                 else:
                     deviation_range[1.0] = deviation_range[1.0] + 1
-            print(deviation_range)
+            # print(deviation_range)
+            cache.set('data_id_and_devation_dict_' + version_item + '_' + nid, data_id_and_devation_dict, 600)
+            cache.set('deviation_range_' + version_item + '_' + nid, deviation_range, 600)
             deviation_num = [v for k, v in deviation_range.items()]
             data_list.append({'name': version_item, 'data': deviation_num})
-        print(data_list)
+        # print(data_list)
 
         result = {'status': True, 'message': 'success', 'data_list': data_list}
     except Exception as e:
-        print(e)
         result = {'status': False, 'message': 'false', 'data_list': []}
+
+    return HttpResponse(json.dumps(result))
+
+
+@csrf_exempt
+def column_click_event_ajax(request, nid):
+    """柱状图点击事件"""
+    selected_data_id = []
+    version = request.POST.get('version')
+    deviation = request.POST.get('deviation')
+    data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version + '_' + nid)
+    deviation_range = cache.get('deviation_range_' + version + '_' + nid)
+    if data_id_and_devation_dict and deviation_range:  # 如果有缓存
+        selected_deviation = deviation.split('-')[0]
+        for k, v in data_id_and_devation_dict[version].items():
+            if float(selected_deviation) == 1.0:
+                if v >= 1.0:
+                    selected_data_id.append(k)
+            if float(selected_deviation) == v and float(selected_deviation) != 1.0:
+                selected_data_id.append(k)
+
+        # 填充列表
+        data_list = []
+        for data_id in selected_data_id:
+            try:  # 防止删除了文件中的某条数据，导致报错
+                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)[
+                    'true_thickness']
+                data_obj = models.DataFile.objects.get(nid=data_id)
+                run_alg_thickness_obj = data_obj.versiontothcikness_set.filter(
+                    version__version=version).values('run_alg_thickness')
+                if run_alg_thickness_obj:  # 如果该数据已跑算法，取出算法厚度值
+                    run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
+                else:
+                    run_alg_thickness = None
+                data_list.append({'data_id': data_id, 'version': version, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
+
+            except:
+                pass
+
+        result = {'status': True, 'message': 'have cache', 'data_list': data_list}
+    else:
+        result = {'status': False, 'message': 'no cache', 'data_list': []}
 
     return HttpResponse(json.dumps(result))
 
@@ -638,6 +722,15 @@ def clear_repeat_imgs():
     for repeat_img in repeat_imgs:
         os.remove(Base_img_path + repeat_img)
 
+
+def export_result(num):
+    """不四舍五入保留1位小数"""
+    num_x, num_y = str(num).split('.')
+    num = float(num_x + '.' + num_y[0:1])
+    return num
+
+
+
 try:
     """定时初始化"""
     scheduler = BackgroundScheduler()
@@ -658,8 +751,3 @@ def test(request):
     # return HttpResponse('...')
     return render(request, 'test.html')
 
-def export_result(num):
-    """不四舍五入保留1位小数"""
-    num_x, num_y = str(num).split('.')
-    num = float(num_x + '.' + num_y[0:1])
-    return num
