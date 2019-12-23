@@ -1,6 +1,8 @@
 {% extends 'index.html' %}
 {% load staticfiles %}
-
+{% block title %}
+    <title>单数据详情</title>
+{% endblock %}
 {% block right-content-container %}
 
     <div style="padding: 15px; margin-top: -40px" class="layui-anim">
@@ -31,11 +33,6 @@
                   <div class="layui-card">
                     <div class="layui-card-header">当前数据信息详情</div>
                     <div class="layui-card-body" style="height: 250px;">
-                        {% if thickness == "-1.0" %}
-                            跑算法得出厚度值：暂未计算厚度值<br>
-                        {% else %}
-                            跑算法得出厚度值：{{ thickness }} mm<br>
-                        {% endif %}
                         {% for kk,vv in message_body_param.items %}
                             {{ kk }}：{{ vv }}<br>
                         {% endfor %}
@@ -49,6 +46,11 @@
                       <div class="layui-card">
                         <div class="layui-card-header">修改当前数据厚度</div>
                         <div class="layui-card-body" style="height: 250px;">
+                            {% if thickness == "-1.0" %}
+                                跑算法得出厚度值：暂未计算厚度值<br>
+                            {% else %}
+                                跑算法得出厚度值：{{ thickness }} mm<br>
+                            {% endif %}
                             手测厚度值：{{ true_thickness }} (mm)<br>
                             <label for="true-thickness">手测厚度值：</label>
                             <input type="text" id="true-thickness" class="layui-input" style="display: inline-block;width: 200px;">

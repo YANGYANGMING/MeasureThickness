@@ -1,5 +1,8 @@
 {% extends 'index.html' %}
 {% load staticfiles %}
+{% block title %}
+    <title>单文件列表</title>
+{% endblock %}
 
 {% block right-content-container %}
         <fieldset class="layui-elem-field layui-field-title">
@@ -94,9 +97,9 @@
                             html += "<td>" + true_thickness + "</td>";
                             console.log(run_alg_thickness);
                             if(run_alg_thickness === null){
-                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\">数据波形</a></td>";
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\" target=\"_blank\">数据波形</a></td>";
                             }else{
-                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/" + run_alg_thickness + "\">数据波形</a></td>";
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/" + run_alg_thickness + "\" target=\"_blank\">数据波形</a></td>";
                             }
                             html += "</tr>";
                     });
@@ -142,6 +145,7 @@
                     layer.closeAll('loading'); //关闭loading
                     $('#run-alg-msg').text(arg.message);
                     ClearMSG('run-alg-msg');
+                    window.location.reload();
                 }
             })
 

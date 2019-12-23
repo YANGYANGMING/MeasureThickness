@@ -1,6 +1,8 @@
 {% extends 'index.html' %}
 {% load staticfiles %}
-
+{% block title %}
+    <title>偏差率统计</title>
+{% endblock %}
 {% block right-content-container %}
 
     <div style="padding: 15px; margin-top: -40px" class="layui-anim">
@@ -40,10 +42,13 @@
             </table>
         </div>
     </div>
+    <div id="pager-id"></div>
 
     <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
     <script>
-    var formSelects = layui.formSelects;
+        var formSelects = layui.formSelects;
+        var curr_page = 1;
+        var limit = 10;
 
          Highcharts.setOptions({
             global: {
@@ -53,7 +58,6 @@
 
         $(function(){
             initChart();
-            console.log({{ nid }})
          });
 
         function initChart() {
@@ -90,42 +94,11 @@
                         cursor: 'pointer',
                         events: {
                             click:function (event) {
-                                let version = event.point.series.name;
-                                let deviation = event.point.category;
-                                $.ajax({
-                                    url: '/thickness/column-click-event-ajax/{{ nid }}/',
-                                    type: 'POST',
-                                    data: {'version': version, 'deviation': deviation},
-                                    dataType: 'JSON',
-                                    success: function (arg) {
-                                        if (arg.status){
-                                            var data_list = arg.data_list;
-                                            var html = '';
-                                            $.each(data_list, function (k, v) {
-                                                var data_id = v.data_id;
-                                                var version = v.version;
-                                                var run_alg_thickness = v.run_alg_thickness;
-                                                var true_thickness = v.true_thickness;
-                                                html += "<tr>";
-                                                html += "<td>" + data_id + "</td>";
-                                                html += "<td>" + version + "</td>";
-                                                html += "<td>" + run_alg_thickness + "</td>";
-                                                html += "<td>" + true_thickness + "</td>";
-                                                if(run_alg_thickness === null){
-                                                    html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/-1.0\" target=\"_blank\">数据波形</a></td>";
-                                                }else{
-                                                    html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + run_alg_thickness + "\" target=\"_blank\">数据波形</a></td>";
-                                                }
-                                                html += "</tr>";
-                                            });
-                                            $("#tb-list").empty().append(html); //页面填充
-
-                                        }else{
-                                            console.log(arg.message);
-                                            SelectVersion();
-                                        }
-                                    }
-                                })
+                                version = event.point.series.name;
+                                deviation = event.point.category;
+                                total = event.point.y;
+                                getPage();
+                                loadData();
 
                             }
                         }
@@ -138,6 +111,7 @@
 
         //选择版本并显示已选版本的数据信息
         function SelectVersion() {
+            layer.load();
             var version = formSelects.value('version', 'valStr');
             console.log(version);
             $.ajax({
@@ -149,11 +123,71 @@
                     if (arg.status){
                         chart.series = arg.data_list;
                         $('#container').highcharts(chart);
+                        layer.closeAll('loading');
                     }
-
                 }
-             })
+            })
         }
+
+        function loadData() {
+            $.ajax({
+                url: '/thickness/column-click-event-ajax/{{ nid }}/',
+                type: 'POST',
+                data: {'version': version,
+                        'deviation': deviation,
+                        'curr_page': curr_page,
+                        'limit': limit
+                },
+                dataType: 'JSON',
+                success: function (arg) {
+                    if (arg.status){
+                        var data_list = arg.data_list;
+                        var html = '';
+                        $.each(data_list, function (k, v) {
+                            var data_id = v.data_id;
+                            var version = v.version;
+                            var run_alg_thickness = v.run_alg_thickness;
+                            var true_thickness = v.true_thickness;
+                            html += "<tr>";
+                            html += "<td>" + data_id + "</td>";
+                            html += "<td>" + version + "</td>";
+                            html += "<td>" + run_alg_thickness + "</td>";
+                            html += "<td>" + true_thickness + "</td>";
+                            if(run_alg_thickness === null){
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/-1.0\" target=\"_blank\">数据波形</a></td>";
+                            }else{
+                                html += "<td><a href=\"/thickness/data-2048-chart/" + data_id + "/" + run_alg_thickness + "\" target=\"_blank\">数据波形</a></td>";
+                            }
+                            html += "</tr>";
+                        });
+                        $("#tb-list").empty().append(html); //页面填充
+
+                    }else{
+                        console.log(arg.message);
+                        SelectVersion();
+                    }
+                }
+            })
+        }
+
+        function getPage() {
+            layui.use(['laypage'], function() {
+                var laypage = layui.laypage;
+                console.log(total);
+                laypage.render({
+                    elem: 'pager-id'
+                    ,count: total
+                    ,layout: ['count', 'prev', 'page', 'next', 'limit', 'limits', 'skip']
+                    ,jump: function(obj, first){
+                        curr_page = obj.curr; //当前页
+                        limit = obj.limit;   //每页显示的条数
+                        if(!first){
+                            loadData();
+                            }
+                        }
+                    });
+                });
+            }
 
 
 

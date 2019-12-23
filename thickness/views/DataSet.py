@@ -7,7 +7,6 @@ from django.db.models import Q
 from django.core.cache import cache
 from MeasureThickness.settings import Base_img_path
 from utils.handel_data import *
-from utils.layui_pager import LayuiPager
 from utils import readfiles, file_type
 from utils.readfiles import *
 from django.views import View
@@ -24,7 +23,7 @@ def tag_manage(request):
     version = models.Version.objects.values('version').last()['version']
     file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
 
-    count = len(file_tag_obj)
+    count = file_tag_obj.count()
     for item in file_tag_obj:
         file_id = item['id']
         true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
@@ -39,8 +38,8 @@ def tag_manage(request):
         return render(request, "thickness/tag_manage.html", locals())
 
     if request.method == "POST":
-        layui_pager = LayuiPager(request, file_tag_obj)
-        result = layui_pager.pager()
+        #分页
+        result = pager(request, file_tag_obj)
 
         return HttpResponse(json.dumps(result))
 
@@ -163,40 +162,43 @@ def search_file_ajax(request):
 
 @csrf_exempt
 def single_file_data(request, nid, version):
-    """单个文件内的数据"""
+    """单个文件的数据列表"""
     # 从session中获取selected_version
+
     selected_version = request.session.get('selected_version')
-    if not selected_version:
+    if not selected_version:  # 如果没有选择版本，默认使用最新版本
         selected_version = models.Version.objects.values('version').last()['version']
-    #print(selected_version)
     version_obj = models.Version.objects.values('version').order_by('-id')
-    data_obj = models.DataFile.objects.filter(file_name_id=nid).all().order_by('nid')
-    #print(data_obj)
-    single_file_obj = []
-    for item in data_obj:
-        try:
-            vt = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
-            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=vt['data_id'])['true_thickness']
-            vt['true_thickness'] = true_thickness
-            single_file_obj.append(vt)
-        except Exception as e:
-            print(e)
-    count = len(single_file_obj)
+    data_obj = models.DataFile.objects.filter(file_name_id=nid).order_by('nid')
+    count = data_obj.count()
     try:
-        file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(file_name_id=nid).first()
+        file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(
+            file_name_id=nid).first()
         file_name = file_obj['file_name__file_name']
         file_id = file_obj['file_name_id']
-    except Exception as e:
-        print(e)
+    except:
+        pass
 
     if request.method == "GET":
         return render(request, "thickness/single_file_list.html", locals())
 
     elif request.method == "POST":
         # 分页
-        layui_pager = LayuiPager(request, single_file_obj)
-        result = layui_pager.pager()
+        result = pager(request, data_obj)
 
+        single_file_obj = []
+        for item in result['data_list']:
+            try:
+                versionTothcikness_obj = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
+            except:  # 如果该数据没有跑算法
+                versionTothcikness_obj = {}
+                versionTothcikness_obj['data_id'] = item.nid
+                versionTothcikness_obj['version__version'] = selected_version
+                versionTothcikness_obj['run_alg_thickness'] = None
+            true_thickness = models.DataFile.objects.values('true_thickness').filter(nid=versionTothcikness_obj['data_id'])[0]['true_thickness']
+            versionTothcikness_obj['true_thickness'] = true_thickness
+            single_file_obj.append(versionTothcikness_obj)
+            result['data_list'] = single_file_obj
         return HttpResponse(json.dumps(result))
 
 
@@ -214,14 +216,11 @@ def single_file_run_alg_ajax(request):
             data_id_list.append(item['nid'])
         thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)  # 处理单个文件数据并跑算法
         for k, v in thickness_dict.items():
-            # version_obj = models.Version.objects.get(version=selected_version)
-            # if not version_obj:
-            #     models.Version.objects.create(version=selected_version)
-            data = models.DataFile.objects.get(nid=k)
             version = models.Version.objects.get(version=selected_version)
-            vt_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
-            if vt_obj:
-                vt_obj.update(run_alg_thickness=v)
+            data = models.DataFile.objects.get(nid=k)
+            versionTothcikness_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
+            if versionTothcikness_obj:
+                versionTothcikness_obj.update(run_alg_thickness=v)
             else:
                 models.VersionToThcikness.objects.create(data_id=data, version=version, run_alg_thickness=v)
 
@@ -235,22 +234,20 @@ def single_file_run_alg_ajax(request):
 @csrf_exempt
 def dataset_condition_list(request):
     """数据集条件列表"""
-    all_dataset = models.DataSetCondition.objects.all().values('id', 'time_and_id', 'dataset_tag').order_by('-id')
-    count = len(all_dataset)
+    all_dataset_obj = models.DataSetCondition.objects.all().order_by('-id')
+    count = all_dataset_obj.count()
     version_obj = models.Version.objects.values('version').order_by('-id')
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
     if not selected_version:
         selected_version = models.Version.objects.values('version').last()['version']
-    print(selected_version)
 
     if request.method == "GET":
         return render(request, 'thickness/dataset_condition_list.html', locals())
     else:
         # 分页
-        layui_pager = LayuiPager(request, all_dataset)
-        result = layui_pager.pager()
-
+        result = pager(request, all_dataset_obj)
+        result['data_list'] = list(result['data_list'].values('id', 'time_and_id', 'dataset_tag'))
         return HttpResponse(json.dumps(result))
 
 
@@ -274,36 +271,33 @@ def single_dataset_list(request, nid):
     """单个数据集列表"""
     data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
-    data_time = eval(data_time_condition_obj['time_and_id'])  # [['2019-09-20', '10', '11'], ['2019-09-21', '13', '15']]
+    count = len(data_set_id)
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
     if not selected_version:
         selected_version = models.Version.objects.values('version').last()['version']
-    print(selected_version)
-    # 填充列表
-    data_list = []
-    for item in data_time:
-        for data_id in range(int(item[1]), int(item[2])+1):  # 数据集中单个日期的数据id范围  [20, 67]
-            try:  # 防止删除了文件中的某条数据，导致报错
-                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-                data_obj = models.DataFile.objects.get(nid=data_id)
-                run_alg_thickness_obj = data_obj.versiontothcikness_set.filter(version__version=selected_version).values('run_alg_thickness')
-                if run_alg_thickness_obj:   # 如果该数据已跑算法，取出算法厚度值
-                    run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
-                else:
-                    run_alg_thickness = None
-                time = item[0]
-                data_list.append({'time': time, 'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})  #[{'time': '2019-09-20', 'data_id': 4, 'thickness': 39.028}, {'time': '2019-09-20', 'data_id': 5, 'thickness': 40.058}, {'time': '2019-09-20', 'data_id': 6, 'thickness': 38.012}]
-            except Exception as e:
-                pass
-    count = len(data_list)
 
     if request.method == "GET":
         return render(request, 'thickness/single_dataset_list.html', locals())
     elif request.method == "POST":
         # 分页
-        layui_pager = LayuiPager(request, data_list)
-        result = layui_pager.pager()
+        result = pager(request, data_set_id)
+        # 填充列表
+        data_list = []
+        for data_id in result['data_list']:
+            try:  # 防止删除了文件中的某条数据，导致报错
+                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+                data_obj = models.DataFile.objects.get(nid=data_id)
+                run_alg_thickness_obj = data_obj.versiontothcikness_set.filter(
+                    version__version=selected_version).values('run_alg_thickness')
+                if run_alg_thickness_obj:  # 如果该数据已跑算法，取出算法厚度值
+                    run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
+                else:
+                    run_alg_thickness = None
+                data_list.append({'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
+                result['data_list'] = data_list
+            except Exception as e:
+                pass
 
         return HttpResponse(json.dumps(result))
 
@@ -327,9 +321,9 @@ def dataset_run_alg_ajax(request):
             #     models.Version.objects.create(version=selected_version)
             data = models.DataFile.objects.get(nid=k)
             version = models.Version.objects.get(version=selected_version)
-            vt_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
-            if vt_obj:
-                vt_obj.update(run_alg_thickness=v)
+            versionTothcikness_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
+            if versionTothcikness_obj:
+                versionTothcikness_obj.update(run_alg_thickness=v)
             else:
                 models.VersionToThcikness.objects.create(data_id=data, version=version, run_alg_thickness=v)
         result = {'status': True, 'message': '算法执行成功'}
@@ -609,15 +603,10 @@ def deviation_rate_ajax(request, nid):
         dataset_id_list.sort()
 
         for version_item in selected_version_list:
-            # 查看是否有缓存
-            # data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version_item + '_' + nid)
-            # deviation_range = cache.get('deviation_range_' + version_item + '_' + nid)
-            # if data_id_and_devation_dict and deviation_range:  # 走缓存
-            #     pass
-            # else:  # 从数据将取数并设置缓存
             deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
             data_id_and_deviation = {}
             data_id_and_devation_dict = {}
+            t1 = time.time()
             for data_id in dataset_id_list:
                 try:
                     data_obj = models.DataFile.objects.get(nid=data_id)
@@ -628,8 +617,9 @@ def deviation_rate_ajax(request, nid):
                     data_id_and_deviation[data_id] = deviation
                 except:
                     pass
+            t2 = time.time()
+            print(t2 - t1)
             data_id_and_devation_dict[version_item] = data_id_and_deviation
-            # print(data_id_and_devation_dict)
             for k_data_id, v_deviation_item in data_id_and_devation_dict[version_item].items():
                 judge_range = deviation_range.get(v_deviation_item)
                 if judge_range or judge_range == 0:
@@ -641,7 +631,6 @@ def deviation_rate_ajax(request, nid):
             cache.set('deviation_range_' + version_item + '_' + nid, deviation_range, 600)
             deviation_num = [v for k, v in deviation_range.items()]
             data_list.append({'name': version_item, 'data': deviation_num})
-        # print(data_list)
 
         result = {'status': True, 'message': 'success', 'data_list': data_list}
     except Exception as e:
@@ -666,10 +655,11 @@ def column_click_event_ajax(request, nid):
                     selected_data_id.append(k)
             if float(selected_deviation) == v and float(selected_deviation) != 1.0:
                 selected_data_id.append(k)
-
+        # 分页
+        result = pager(request, selected_data_id)
         # 填充列表
         data_list = []
-        for data_id in selected_data_id:
+        for data_id in result['data_list']:
             try:  # 防止删除了文件中的某条数据，导致报错
                 true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)[
                     'true_thickness']
@@ -730,6 +720,23 @@ def export_result(num):
     return num
 
 
+def pager(request, data_obj):
+    """分页"""
+    result = {'status': False, 'data_list': []}
+    limit = int(request.POST.get('limit'))  # 每页显示的条数
+    curr_page = int(request.POST.get('curr_page'))
+    # print(limit)
+    # print(curr_page)
+    if curr_page == 1:
+        start_range = curr_page - 1
+        end_range = curr_page * limit
+    else:
+        start_range = (curr_page - 1) * limit
+        end_range = curr_page * limit
+    result['data_list'] = data_obj[start_range: end_range]
+    result['status'] = True
+    return result
+
 
 try:
     """定时初始化"""
@@ -744,10 +751,11 @@ except Exception as e:
 
 @csrf_exempt
 def test(request):
-    # if request.method == 'POST':
-    #     file = request.FILES.getlist('fd')
-    #     print(file.name)
-    #     print(file.size)
-    # return HttpResponse('...')
+    t1 = time.time()
+    data_obj = models.DataFile.objects.filter(file_name_id=21).all().order_by('nid')
+    temp = data_obj[3000: 3010]
+    print(temp)
+    t2 = time.time()
+    print(t2 - t1)
     return render(request, 'test.html')
 
