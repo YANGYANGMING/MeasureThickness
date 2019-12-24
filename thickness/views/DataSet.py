@@ -311,27 +311,30 @@ def dataset_run_alg_ajax(request):
         start = time.time()
         nid = request.POST.get('nid')
         selected_version = request.POST.get('selected_version')
-        print('selected_version', selected_version)
         data_set_id_obj = models.DataSetCondition.objects.filter(id=nid).values('data_set_id')
         data_set_id_list = eval(data_set_id_obj[0]['data_set_id'])
         thickness_dict = handledataset.handle_data_and_run_alg(data_set_id_list, selected_version)  # 处理数据集数据并跑算法
-        for k, v in thickness_dict.items():
-            # version_obj = models.Version.objects.get(version=selected_version)
-            # if not version_obj:
-            #     models.Version.objects.create(version=selected_version)
-            data = models.DataFile.objects.get(nid=k)
-            version = models.Version.objects.get(version=selected_version)
-            versionTothcikness_obj = models.VersionToThcikness.objects.filter(data_id=data, version=version)
-            if versionTothcikness_obj:
-                versionTothcikness_obj.update(run_alg_thickness=v)
-            else:
-                models.VersionToThcikness.objects.create(data_id=data, version=version, run_alg_thickness=v)
-        result = {'status': True, 'message': '算法执行成功'}
         end = time.time()
         print('alg use time:', (end - start))
+        tt1 = time.time()
+
+
+        for data_id, run_alg_thickness in thickness_dict.items():
+            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+            deviation = export_result(abs(true_thickness - run_alg_thickness))  # 保留一位小数
+            versionTothcikness_obj = models.VersionToThcikness.objects.filter(data_id=data_id, version__version=selected_version)
+            if versionTothcikness_obj:
+                temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
+                versionTothcikness_obj.update(**temp_dict)
+            else:
+                temp_dict = {'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'version__version': selected_version, 'deviation': deviation}
+                models.VersionToThcikness.objects.create(**temp_dict)
+        tt2 = time.time()
+        print('循环：', tt2 - tt1)
+        result = {'status': True, 'message': '算法执行成功'}
     except Exception as e:
         print(e, "跑算法出错！")
-    return HttpResponse(json.dumps(result))\
+    return HttpResponse(json.dumps(result))
 
 
 @csrf_exempt
@@ -600,23 +603,28 @@ def deviation_rate_ajax(request, nid):
         data_list = []
         selected_version_list = request.POST.get('version').split(',')
         dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
-        dataset_id_list.sort()
+        dataset_id_list = str(tuple(dataset_id_list))
 
         for version_item in selected_version_list:
             deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
             data_id_and_deviation = {}
             data_id_and_devation_dict = {}
+            version_id = models.Version.objects.values('id').get(version=version_item)['id']
             t1 = time.time()
-            for data_id in dataset_id_list:
-                try:
-                    data_obj = models.DataFile.objects.get(nid=data_id)
-                    true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-                    run_alg_thickness = data_obj.versiontothcikness_set.filter(version__version=version_item).values('run_alg_thickness')[0]['run_alg_thickness']
-                    deviation_temp = abs(true_thickness - run_alg_thickness)
-                    deviation = export_result(deviation_temp)  # 保留一位小数
+            try:  # 批量查找
+                dataset_id_list_obj = models.VersionToThcikness.objects.raw("select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (dataset_id_list, version_id))
+                for data_item in dataset_id_list_obj:
+                    data_id = data_item.data_id_id
+                    deviation = data_item.deviation
                     data_id_and_deviation[data_id] = deviation
-                except:
-                    pass
+            except:
+                pass
+            # for data_id in dataset_id_list:
+            #     try:
+            #         deviation = models.VersionToThcikness.objects.filter(data_id=data_id, version__version=version_item).values('deviation')[0]['deviation']
+            #         data_id_and_deviation[data_id] = deviation
+            #     except:
+            #         pass
             t2 = time.time()
             print(t2 - t1)
             data_id_and_devation_dict[version_item] = data_id_and_deviation
@@ -738,6 +746,11 @@ def pager(request, data_obj):
     return result
 
 
+def page_404(request):
+    """404页面"""
+    return render(request, 'thickness/404.html')
+
+
 try:
     """定时初始化"""
     scheduler = BackgroundScheduler()
@@ -752,9 +765,8 @@ except Exception as e:
 @csrf_exempt
 def test(request):
     t1 = time.time()
-    data_obj = models.DataFile.objects.filter(file_name_id=21).all().order_by('nid')
-    temp = data_obj[3000: 3010]
-    print(temp)
+    run_alg_thickness = models.VersionToThcikness.objects.filter(data_id=20, version=3).values('run_alg_thickness')[0]['run_alg_thickness']
+
     t2 = time.time()
     print(t2 - t1)
     return render(request, 'test.html')

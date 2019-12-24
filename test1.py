@@ -171,8 +171,26 @@ b = "2225,2891,4087,1082,0,0,1877,4089,4089,4089,1761,0,0,0,0,4066,4089,4089,408
 # print(json.dumps(dic))
 # data_obj = models.VersionToThcikness.objects.filter(data_id=12, version='2').values('data_id', 'version__version', 'run_alg_thickness')[0]
 # print(data_obj)
-deviation_num = []
-deviation_range = {0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
-deviation_num.append([v for k, v in deviation_range.items()])
-print(deviation_num)
+li = "(3, 4, 11, 12, 13)"
+# li = '(20, 21, 22, 23, 24, 25)'
+# try:
+#     ret = models.VersionToThcikness.objects.raw("select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=3 order by data_id_id" % li)
+#     for item in ret:
+#         print(item)
+# except Exception as e:
+#     print(e)
+# try:  # 批量查找
+#     dataset_id_list_obj = models.VersionToThcikness.objects.raw(
+#         "select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (li, '2'))
+#     print(dataset_id_list_obj)
+#     for data_item in dataset_id_list_obj:
+#         # data_id = data_item.data_id_id
+#         # deviation = data_item.deviation
+#         # print(data_id)
+#         # print(deviation)
+#         print('data_item', data_item)
+# except:
+#     pass
 
+l = [20, 21, 22, 23, 24, 25]
+print(set(l))

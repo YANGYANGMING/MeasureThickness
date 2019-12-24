@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path
 from django.conf.urls import include
-from thickness.views import account
+from thickness.views import account, DataSet
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,5 +25,7 @@ urlpatterns = [
     re_path(r'^logout/$', account.LogoutView.as_view()),
 
     re_path(r'^thickness/', include('thickness.urls')),
+    re_path(r'^$', RedirectView.as_view(url='thickness/index/')),
+    # re_path(r'\S', DataSet.page_404),
 
 ]

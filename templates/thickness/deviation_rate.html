@@ -63,7 +63,8 @@
         function initChart() {
             chart = {
                 chart: {
-                    type: 'column'
+                    type: 'column',
+                    zoomType: 'y',
                 },
                 title: {
                     text: '偏差率'
@@ -113,7 +114,7 @@
         function SelectVersion() {
             layer.load();
             var version = formSelects.value('version', 'valStr');
-            console.log(version);
+            //console.log(version);
             $.ajax({
                 url: '/thickness/deviation-rate-ajax/{{ nid }}/',
                 type: 'POST',
@@ -173,7 +174,7 @@
         function getPage() {
             layui.use(['laypage'], function() {
                 var laypage = layui.laypage;
-                console.log(total);
+                //console.log(total);
                 laypage.render({
                     elem: 'pager-id'
                     ,count: total

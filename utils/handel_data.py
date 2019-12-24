@@ -24,22 +24,47 @@ class HandleDataSet(object):
     def handle_data_and_run_alg(self, data_id_list, version):
         """跑算法前处理数据并且跑算法得出厚度值"""
         thickness_dict = {}
-        for data_id_item in data_id_list:
-            data_item = models.DataFile.objects.filter(nid=data_id_item).values('message_head', 'message_body_data', 'message_body_param')[0]
-            message_head = eval(data_item['message_head'])
-            data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])        #' 3X,6144'
-            message_body_data = data_item['message_body_data'].tobytes()
-            if data_item['message_body_param']:  #_lsa文件中，没有message_body_param部分数据，数据库中为None
-                after_body_param = eval(data_item['message_body_param'])
-                gain = int(after_body_param['Gain'])
-            else:
-                gain = 60
-            data = list(struct.unpack("<%sh" % data_len, message_body_data))
-            if len(data) == data_len:
-                thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
-            else:
-                thick_mm = -19.0
-            thickness_dict[data_id_item] = thick_mm
+        data_id_list = str(tuple(data_id_list))  # data_id_list = "(5, 6, 7, 8, 9, 10)"
+        data_id_list_obj = models.DataFile.objects.raw("select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s order by nid" % data_id_list)
+        for data_item in data_id_list_obj:
+            try:
+                data_id = data_item.nid
+                message_head = eval(data_item.message_head)
+                data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])        #' 3X,6144'
+                message_body_data = data_item.message_body_data.tobytes()
+                if data_item.message_body_param:  #_lsa文件中，没有message_body_param部分数据，数据库中为None
+                    after_body_param = eval(data_item.message_body_param)
+                    gain = int(after_body_param['Gain'])
+                else:
+                    gain = 60
+                data = list(struct.unpack("<%sh" % data_len, message_body_data))
+                if len(data) == data_len:
+                    thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
+                else:
+                    thick_mm = -19.0
+                thickness_dict[data_id] = thick_mm
+            except Exception as e:
+                print(e)
+
+        # for data_id_item in data_id_list:
+        #     try:
+        #         data_item = models.DataFile.objects.filter(nid=data_id_item).values('message_head', 'message_body_data', 'message_body_param')[0]
+        #         message_head = eval(data_item['message_head'])
+        #         data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])        #' 3X,6144'
+        #         message_body_data = data_item['message_body_data'].tobytes()
+        #         if data_item['message_body_param']:  #_lsa文件中，没有message_body_param部分数据，数据库中为None
+        #             after_body_param = eval(data_item['message_body_param'])
+        #             gain = int(after_body_param['Gain'])
+        #         else:
+        #             gain = 60
+        #         data = list(struct.unpack("<%sh" % data_len, message_body_data))
+        #         if len(data) == data_len:
+        #             thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
+        #         else:
+        #             thick_mm = -19.0
+        #         thickness_dict[data_id_item] = thick_mm
+        #     except Exception as e:
+        #         print(e)
 
         return thickness_dict
 
