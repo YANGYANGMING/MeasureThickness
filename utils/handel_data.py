@@ -46,26 +46,6 @@ class HandleDataSet(object):
             except Exception as e:
                 print(e)
 
-        # for data_id_item in data_id_list:
-        #     try:
-        #         data_item = models.DataFile.objects.filter(nid=data_id_item).values('message_head', 'message_body_data', 'message_body_param')[0]
-        #         message_head = eval(data_item['message_head'])
-        #         data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])        #' 3X,6144'
-        #         message_body_data = data_item['message_body_data'].tobytes()
-        #         if data_item['message_body_param']:  #_lsa文件中，没有message_body_param部分数据，数据库中为None
-        #             after_body_param = eval(data_item['message_body_param'])
-        #             gain = int(after_body_param['Gain'])
-        #         else:
-        #             gain = 60
-        #         data = list(struct.unpack("<%sh" % data_len, message_body_data))
-        #         if len(data) == data_len:
-        #             thick_mm = calThickness(data=data, gain_db=gain, nSize=data_len, version=version)
-        #         else:
-        #             thick_mm = -19.0
-        #         thickness_dict[data_id_item] = thick_mm
-        #     except Exception as e:
-        #         print(e)
-
         return thickness_dict
 
     def _MD5(self, file_obj):
