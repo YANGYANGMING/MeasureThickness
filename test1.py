@@ -192,6 +192,12 @@ li = "(3, 4, 11, 12, 13)"
 # except:
 #     pass
 
-l = {20, 21, 22, 23, 24, 25}
-ll = {20, 21, 22}
-print(l - ll)
+from decimal import Decimal
+def export_result(num):
+    """不四舍五入保留1位小数"""
+    num_x, num_y = str(num).split('.')
+    num = float(num_x + '.' + num_y[0:1])
+    return num
+deviation = abs(Decimal('20') - Decimal('20.7'))
+print(deviation)
+

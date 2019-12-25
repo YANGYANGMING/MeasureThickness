@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect, HttpResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from MeasureThickness.settings import Base_img_path
 from django.utils.safestring import mark_safe
 from django.db.models import Q
 from django.core.cache import cache
-from MeasureThickness.settings import Base_img_path
+from decimal import Decimal
 from utils.handel_data import *
 from utils import readfiles, file_type
 from utils.readfiles import *
@@ -325,24 +326,29 @@ def handle_alg_process(data_id_list, selected_version):
     dataset_id_list_obj = models.VersionToThcikness.objects.raw(
         "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (data_id_list, version_id))
     # 用于update
-    for data_item in dataset_id_list_obj:
-        data_id = data_item.data_id_id
-        run_alg_thickness = data_item.run_alg_thickness
-        update_data_id_set.add(data_id)
-        true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-        deviation = export_result(abs(true_thickness - run_alg_thickness))  # 保留一位小数
-        temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
-        models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
+    try:
+        for data_item in dataset_id_list_obj:
+            data_id = data_item.data_id_id
+            run_alg_thickness = data_item.run_alg_thickness
+            update_data_id_set.add(data_id)
+            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+            deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+            temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
+            models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
+    except Exception as e:
+        print(e)
     # 用于create
-    create_data_id_set = set(eval(data_id_list)) - update_data_id_set
-    for data_id in create_data_id_set:
-        true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-        run_alg_thickness = thickness_dict[data_id]
-        deviation = export_result(abs(true_thickness - run_alg_thickness))  # 保留一位小数
-        temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
-                     'version_id': version_id, 'deviation': deviation}
-        models.VersionToThcikness.objects.create(**temp_dict)
-
+    try:
+        create_data_id_set = set(eval(data_id_list)) - update_data_id_set
+        for data_id in create_data_id_set:
+            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+            run_alg_thickness = thickness_dict[data_id]
+            deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+            temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
+                         'version_id': version_id, 'deviation': deviation}
+            models.VersionToThcikness.objects.create(**temp_dict)
+    except:
+        pass
 
 @csrf_exempt
 def select_version_ajax(request):

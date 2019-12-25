@@ -95,7 +95,7 @@
                             html += "<td>" + version + "</td>";
                             html += "<td>" + run_alg_thickness + "</td>";
                             html += "<td>" + true_thickness + "</td>";
-                            console.log(run_alg_thickness);
+                            //console.log(run_alg_thickness);
                             if(run_alg_thickness === null){
                                 html += "<td><a href=\"/thickness/data-2048-chart/" + nid + "/-1.0\" target=\"_blank\">数据波形</a></td>";
                             }else{
@@ -122,7 +122,7 @@
                         ,jump: function(obj, first){
                             curr_page = obj.curr; //当前页
                             limit = obj.limit;   //每页显示的条数
-                            console.log(total);
+                            //console.log(total);
                             if(!first){
                                 loadData()
                                 }
@@ -135,7 +135,7 @@
         function RunAlg() {
             layer.load();
             var version = formSelects.value('version', 'valStr');
-            console.log(version);
+            //console.log(version);
             $.ajax({
                 url: '/thickness/single-file-run-alg-ajax/',
                 type: 'POST',
@@ -145,7 +145,6 @@
                     layer.closeAll('loading'); //关闭loading
                     $('#run-alg-msg').text(arg.message);
                     ClearMSG('run-alg-msg');
-                    window.location.reload();
                 }
             })
 
@@ -154,7 +153,7 @@
         //选择版本并显示已选版本的数据信息
         function SelectVersion() {
             var version = formSelects.value('version', 'valStr');
-            console.log(version);
+            //console.log(version);
             $.ajax({
                 url: '/thickness/select-version-ajax/',
                 type: 'POST',
@@ -195,7 +194,6 @@
                 success: function (arg) {
                     $('#batch-save-msg').text(arg.message);
                     ClearMSG('batch-save-msg');
-                    window.location.reload();
                 }
             })
         }
@@ -221,7 +219,9 @@
                     dataType: 'JSON',
                     success: function (arg) {
                         $('#remove-data-msg').text(arg.message);
-                        ClearMSG('remove-data-msg');
+                        setTimeout(function () {
+                            $('#remove-data-msg').text('');
+                            }, 2000);
                         $('#tb-list').find(':checkbox').each(function () {
                             if ($(this).prop('checked')){
                                 $(this).parent().parent().remove();
@@ -237,7 +237,8 @@
         function ClearMSG(id) {
             setTimeout(function () {
                 $('#'+id).text('');
-                }, 1000);
+                window.location.reload();
+                }, 1500);
         }
 
     </script>
