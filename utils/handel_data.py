@@ -24,7 +24,6 @@ class HandleDataSet(object):
     def handle_data_and_run_alg(self, data_id_list, version):
         """跑算法前处理数据并且跑算法得出厚度值"""
         thickness_dict = {}
-        data_id_list = str(tuple(data_id_list))  # data_id_list = "(5, 6, 7, 8, 9, 10)"
         data_id_list_obj = models.DataFile.objects.raw("select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s order by nid" % data_id_list)
         for data_item in data_id_list_obj:
             try:

@@ -192,12 +192,15 @@ li = "(3, 4, 11, 12, 13)"
 # except:
 #     pass
 
-from decimal import Decimal
-def export_result(num):
-    """不四舍五入保留1位小数"""
-    num_x, num_y = str(num).split('.')
-    num = float(num_x + '.' + num_y[0:1])
-    return num
-deviation = abs(Decimal('20') - Decimal('20.7'))
-print(deviation)
+# from decimal import Decimal
+# def export_result(num):
+#     """不四舍五入保留1位小数"""
+#     num_x, num_y = str(num).split('.')
+#     num = float(num_x + '.' + num_y[0:1])
+#     return num
+# deviation = abs(Decimal('20') - Decimal('20.7'))
+# print(deviation)
 
+data_id_list_obj = models.DataFile.objects.raw("select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in (66,66) order by nid")
+for item in data_id_list_obj:
+    print(item)

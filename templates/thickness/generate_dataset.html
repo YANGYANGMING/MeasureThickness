@@ -70,7 +70,7 @@
               var getData = transfer.getData('demo1'); //获取右侧数据
               console.log(JSON.stringify(getData));
               $.ajax({
-                  url: "/thickness/generate-dataset/",
+                  url: "/thickness/generate-dataset-by-time/",
                   data: {'selected_data': JSON.stringify(getData)},
                   type: "POST",
                   dataType: 'JSON',
