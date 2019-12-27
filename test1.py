@@ -206,9 +206,8 @@ li = "(3, 4, 11, 12, 13)"
 #
 # id_list = []
 # data_id_list_obj = models.DataFile.objects.raw("select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s" % test_list)
-# for i in data_id_list_obj:
-#     id_list.append(i.nid)
-# print(id_list)
+# print(data_id_list_obj.__dir__())
+# print(data_id_list_obj.__sizeof__())
 
 # data_obj = models.DataFile.objects.filter(file_name_id=28).order_by('nid')
 # print(data_obj)
@@ -216,5 +215,28 @@ li = "(3, 4, 11, 12, 13)"
 # for i in data_obj:
 #     data_id_list.append(i.nid)
 # print(data_id_list)
-data_obj = models.DataFile.objects.filter(file_name_id=nid).order_by('nid')
+t1 = time.time()
+data_time_condition_obj = models.DataSetCondition.objects.filter(id=12).values('time_and_id', 'data_set_id')[0]
+data_set_id = eval(data_time_condition_obj['data_set_id'])
+data_set_id = str(tuple(data_set_id))
+# 查找所以的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对
+data_id_list_obj = models.DataFile.objects.raw("select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s" % data_set_id)
+# count = data_id_list_obj.__len__()
+count = 0
+for i in data_id_list_obj:
+    count += 1
+print(count)
+# nid = 28
+# data_obj = models.DataFile.objects.filter(file_name_id=nid).order_by('nid')
+# count = data_obj.count()
+# try:
+#     file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(
+#         file_name_id=nid).first()
+#     file_name = file_obj['file_name__file_name']
+#     file_id = file_obj['file_name_id']
+# except:
+#     pass
+t2 = time.time()
+print('time:', t2 - t1)
+
 

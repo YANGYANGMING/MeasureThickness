@@ -308,7 +308,8 @@ def single_dataset_list(request, nid):
                     run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
                 else:
                     run_alg_thickness = None
-                data_list.append({'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
+                data_list.append(
+                    {'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
 
             except Exception as e:
                 pass
