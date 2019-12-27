@@ -12,6 +12,7 @@ from utils import readfiles, file_type
 from utils.readfiles import *
 from django.views import View
 from thickness import models
+import random
 import json
 
 handledataset = HandleDataSet()
@@ -27,8 +28,7 @@ def tag_manage(request):
         version = models.Version.objects.values('version').last()['version']
         for item in file_tag_obj:
             file_id = item['id']
-            true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
-                'true_thickness']
+            true_thickness = get_most_true_thickness(file_id)
             item['true_thickness'] = true_thickness
             if item['tag_content']:
                 tag_content_dict = eval(item['tag_content'])
@@ -40,7 +40,7 @@ def tag_manage(request):
         return render(request, "thickness/tag_manage.html", locals())
 
     if request.method == "POST":
-        #分页
+        # 分页
         result = pager(request, file_tag_obj)
         result['data_list'] = list(result['data_list'])
         return HttpResponse(json.dumps(result))
@@ -59,7 +59,6 @@ def tag_manage_save_ajax(request):
         else:
             # 重跑算法
             restart_run_alg(file_id, true_thickness)
-            models.DataFile.objects.filter(file_name=file_id).update(true_thickness=true_thickness)
 
         img_obj = request.FILES.get('img_obj')
         tag_content = models.DataTag.objects.values('tag_content').filter(id=file_id)[0]['tag_content']
@@ -91,11 +90,10 @@ def tag_manage_save_ajax(request):
 
 def restart_run_alg(file_id, true_thickness):
     """修改真实厚度值后，使用最新版本算法来重跑算法"""
-    prev_true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
-        'true_thickness']
+    prev_true_thickness = get_most_true_thickness(file_id)
     # 如果true_thickness更改，需要重跑算法
     if prev_true_thickness != float(true_thickness):
-        print('重跑')
+        models.DataFile.objects.filter(file_name_id=file_id).update(true_thickness=true_thickness)
         version = models.Version.objects.values('version').last()['version']
         data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
         data_id_list = [item['nid'] for item in data_id_list]
@@ -266,7 +264,6 @@ def dataset_condition_list(request):
         return HttpResponse(json.dumps(result))
 
 
-
 @csrf_exempt
 def save_dataset_tag_ajax(request):
     """保存数据集tag"""
@@ -287,7 +284,8 @@ def single_dataset_list(request, nid):
     """单个数据集列表"""
     data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
-    count = len(data_set_id)
+    data_id_list = true_data_id_list(data_set_id)
+    count = len(data_id_list)
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
     if not selected_version:
@@ -297,7 +295,7 @@ def single_dataset_list(request, nid):
         return render(request, 'thickness/single_dataset_list.html', locals())
     elif request.method == "POST":
         # 分页
-        result = pager(request, data_set_id)
+        result = pager(request, data_id_list)
         # 填充列表
         data_list = []
         for data_id in result['data_list']:
@@ -311,12 +309,23 @@ def single_dataset_list(request, nid):
                 else:
                     run_alg_thickness = None
                 data_list.append({'data_id': data_id, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
-                result['data_list'] = data_list
+
             except Exception as e:
                 pass
+            result['data_list'] = data_list
 
         return HttpResponse(json.dumps(result))
 
+
+def true_data_id_list(id_list):
+    """查找所以的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对"""
+    id_list = str(tuple(id_list))
+    data_id_list = []
+    data_id_list_obj = models.DataFile.objects.raw(
+        "select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s" % id_list)
+    for i in data_id_list_obj:
+        data_id_list.append(i.nid)
+    return data_id_list
 
 @csrf_exempt
 def dataset_run_alg_ajax(request):
@@ -324,14 +333,14 @@ def dataset_run_alg_ajax(request):
     result = {'status': False, 'message': '算法执行失败'}
     try:
         import time
+        tt1 = time.time()
         nid = request.POST.get('nid')
         selected_version = request.POST.get('selected_version')
         data_set_id_obj = models.DataSetCondition.objects.filter(id=nid).values('data_set_id')
         data_id_list = eval(data_set_id_obj[0]['data_set_id'])
-        tt1 = time.time()
         handle_alg_process(data_id_list, selected_version)
         tt2 = time.time()
-        print('循环：', tt2 - tt1)
+        print('数据集跑算法时间：', tt2 - tt1)
         result = {'status': True, 'message': '算法执行成功'}
     except Exception as e:
         print(e, "跑算法出错！")
@@ -349,8 +358,8 @@ def handle_alg_process(data_id_list, selected_version):
     dataset_id_list_obj = models.VersionToThcikness.objects.raw(
         "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (data_id_list, version_id))
     # 用于update
-    try:
-        for data_item in dataset_id_list_obj:
+    for data_item in dataset_id_list_obj:
+        try:
             data_id = data_item.data_id_id
             run_alg_thickness = data_item.run_alg_thickness
             update_data_id_set.add(data_id)
@@ -360,13 +369,13 @@ def handle_alg_process(data_id_list, selected_version):
             deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
             temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
             models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
-            print('update')
-    except Exception as e:
-        print('update', e)
+            # print('update')
+        except Exception as e:
+            pass
     # 用于create
-    try:
-        create_data_id_set = set(eval(data_id_list)) - update_data_id_set
-        for data_id in create_data_id_set:
+    create_data_id_set = set(eval(data_id_list)) - update_data_id_set
+    for data_id in create_data_id_set:
+        try:
             true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
             if not true_thickness:
                 true_thickness = 0
@@ -375,9 +384,9 @@ def handle_alg_process(data_id_list, selected_version):
             temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
                          'version_id': version_id, 'deviation': deviation}
             models.VersionToThcikness.objects.create(**temp_dict)
-            print('create')
-    except Exception as e:
-        print('create', e)
+            # print('create')
+        except Exception as e:
+            pass
 
 @csrf_exempt
 def select_version_ajax(request):
@@ -405,11 +414,11 @@ def batch_save_true_thickness_ajax(request):
             # 如果true_thickness更改，需要重跑算法
             if prev_true_thickness != true_thickness:
                 print('重跑')
+                models.DataFile.objects.filter(nid=nid).update(true_thickness=true_thickness)
                 version = models.Version.objects.values('version').last()['version']
                 data_id_list = [nid, nid]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
                 handle_alg_process(data_id_list, version)
 
-            models.DataFile.objects.filter(nid=nid).update(true_thickness=true_thickness)
         result = {'status': True, 'message': '批量设置成功'}
     except Exception as e:
         result = {'status': False, 'message': '厚度值类型错误，正确类型为：浮点型'}
@@ -565,7 +574,7 @@ class GenerateDataSetView(View):
         script = """layui.use('slider', function(){
                       var slider = layui.slider;"""
         selected_data = json.loads(request.POST.get('selected_data'))
-        # print('selected_data', selected_data)
+        print('selected_data', selected_data)
         if selected_data == []:
             result = {'status': False, 'message': ele}
         else:
@@ -743,7 +752,16 @@ def submit_true_thickness(request):
         true_thickness = float(request.POST.get('true_thickness'))
         data_id = request.POST.get('nid')
 
-        models.DataFile.objects.filter(nid=data_id).update(true_thickness=true_thickness)
+        prev_true_thickness = models.DataFile.objects.values('true_thickness').filter(nid=data_id)[0][
+            'true_thickness']
+        # 如果true_thickness更改，需要重跑算法
+        if prev_true_thickness != true_thickness:
+            print('重跑')
+            models.DataFile.objects.filter(nid=data_id).update(true_thickness=true_thickness)
+            version = models.Version.objects.values('version').last()['version']
+            data_id_list = [data_id, data_id]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
+            handle_alg_process(data_id_list, version)
+
         result = {'status': True, 'message': '设置成功'}
     except Exception as e:
         result = {'status': False, 'message': '数据格式有误'}
@@ -773,6 +791,30 @@ def export_result(num):
     num_x, num_y = str(num).split('.')
     num = float(num_x + '.' + num_y[0:1])
     return num
+
+
+def get_most_true_thickness(file_id):
+    true_thickness_obj = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)
+    random.shuffle(list(true_thickness_obj))
+    sample_list = [item['true_thickness'] for item in true_thickness_obj[:20]]
+    # 找出sample_list中出现最多的数据
+    true_thickness = showmax(sample_list)
+
+    return true_thickness
+
+
+def showmax(sample_list):
+    index1 = 0  # 记录出现次数最多的元素下标
+    max_num = 0  # 记录最大的元素出现次数
+    for i in range(len(sample_list)):
+        flag = 0  # 记录每一个元素出现的次数
+        for j in range(i + 1, len(sample_list)):  # 遍历i之后的元素下标
+            if sample_list[j] == sample_list[i]:
+                flag += 1  # 每当发现与自己相同的元素，flag+1
+        if flag > max_num:  # 如果此时元素出现的次数大于最大值，记录此时元素的下标
+            max_num = flag
+            index1 = i
+    return sample_list[index1]
 
 
 def pager(request, data_obj):

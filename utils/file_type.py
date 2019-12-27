@@ -72,14 +72,14 @@ class FileType(object):
                 after_dict = dict(zip(after_key_list, after_value_list))
                 after_dict_data = after_dict.get('Data')
                 # ---json---      data_len<=2048的时候，json比tuple快
-                if data_len <= 2048:
-                    after_dict_data = "[" + after_dict_data + "]"
-                    after_dict_data = json.loads(after_dict_data)
-                    after_dict_data = struct.pack("<%sh" % data_len, *after_dict_data)
+                # if data_len <= 2048:
+                after_dict_data = "[" + after_dict_data + "]"
+                after_dict_data = json.loads(after_dict_data)
+                after_dict_data = struct.pack("<%sh" % data_len, *after_dict_data)
                 # ---tuple---    data_len>2048的时候，tuple比json快
-                else:
-                    after_dict['Data'] = (int(item) for item in after_dict_data.split(','))
-                    after_dict_data = struct.pack("<%sh" % data_len, *after_dict['Data'])
+                # else:
+                #     after_dict['Data'] = (int(item) for item in after_dict_data.split(','))
+                #     after_dict_data = struct.pack("<%sh" % data_len, *after_dict['Data'])
 
                 # ---map---
                 # after_dict_data = after_dict_data.strip("'").split(',')

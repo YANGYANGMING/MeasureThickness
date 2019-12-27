@@ -144,7 +144,7 @@
 
         function trOutEditMode($tr){
             //退出编辑并保存
-            //layui.load();
+            layer.load();
             $tr.removeClass('success');
             var nid = $tr.children().eq(2).html();
             var fd = new FormData();
@@ -189,7 +189,7 @@
                                 }
                             }
                         });
-                        //layer.closeAll('loading'); //关闭loading
+                        layer.closeAll('loading'); //关闭loading
                     }
                 }
             });
