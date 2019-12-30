@@ -5,10 +5,13 @@ from django.utils.decorators import method_decorator
 from MeasureThickness.settings import Base_img_path
 from django.utils.safestring import mark_safe
 from django.db.models import Q
+from django.http import JsonResponse
 from django.core.cache import cache
 from decimal import Decimal
 from utils.handel_data import *
-from utils import readfiles, file_type
+from utils import readfiles
+from utils import file_type
+from utils import auth
 from utils.readfiles import *
 from django.views import View
 from thickness import models
@@ -18,6 +21,10 @@ import json
 handledataset = HandleDataSet()
 handleimgs = HandleImgs()
 file_count = 0
+ENCRYPT_LIST = [
+    # {'encrypt': encrypt, 'time': timestamp
+]
+
 
 @csrf_exempt
 def tag_manage(request):
@@ -878,13 +885,27 @@ def submit_true_thickness(request):
     return HttpResponse(json.dumps(result))
 
 
-@csrf_exempt
-def alg_api():
-    """
-    算法api
-    :return:
-    """
-    pass
+
+class AlgAPI(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(AlgAPI, self).dispatch(request, *args, **kwargs)
+
+    @method_decorator(auth.alg_api_auth)
+    def post(self, request, *args, **kwargs):
+        """
+        算法api
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        alg_info = json.loads(request.body.decode('utf-8'))
+        print(alg_info)
+
+        result = {'status': True, 'message': None}
+
+        return JsonResponse(result)
 
 
 def clear_repeat_imgs():

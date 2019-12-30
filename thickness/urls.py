@@ -42,7 +42,7 @@ urlpatterns = [
     re_path(r'^deviation-rate-ajax/(\d+)/$', DataSet.deviation_rate_ajax),
     re_path(r'^column-click-event-ajax/(\d+)/$', DataSet.column_click_event_ajax),
 
-    re_path(r'^alg-api/$', DataSet.alg_api),
+    re_path(r'^alg-api/$', DataSet.AlgAPI.as_view()),
 
     re_path(r'^test/$', DataSet.test),
 
