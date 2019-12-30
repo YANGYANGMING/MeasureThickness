@@ -180,7 +180,6 @@ def search_file_ajax(request):
 def single_file_data(request, nid, version):
     """单个文件的数据列表"""
     # 从session中获取selected_version
-
     selected_version = request.session.get('selected_version')
     if not selected_version:  # 如果没有选择版本，默认使用最新版本
         selected_version = models.Version.objects.values('version').last()['version']
@@ -188,8 +187,7 @@ def single_file_data(request, nid, version):
     data_obj = models.DataFile.objects.filter(file_name_id=nid).order_by('nid')
     count = data_obj.count()
     try:
-        file_obj = models.DataFile.objects.values('file_name_id', 'file_name__file_name').filter(
-            file_name_id=nid).first()
+        file_obj = data_obj.values('file_name_id', 'file_name__file_name').first()
         file_name = file_obj['file_name__file_name']
         file_id = file_obj['file_name_id']
     except:
@@ -319,14 +317,14 @@ def single_dataset_list(request, nid):
 
 
 def true_data_id_list(id_list):
-    """查找所以的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对"""
-    id_list = str(tuple(id_list))
+    """查找所有的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对"""
+    id_list = list_to_str_tuple(id_list)
     data_id_list = []
-    data_id_list_obj = models.DataFile.objects.raw(
-        "select nid, message_head, message_body_data, message_body_param from thickness_datafile where nid in %s" % id_list)
+    data_id_list_obj = models.DataFile.objects.raw("select nid from thickness_datafile where nid in %s" % id_list)
     for i in data_id_list_obj:
         data_id_list.append(i.nid)
     return data_id_list
+
 
 @csrf_exempt
 def dataset_run_alg_ajax(request):
@@ -351,9 +349,7 @@ def dataset_run_alg_ajax(request):
 def handle_alg_process(data_id_list, selected_version):
     """处理算法过程"""
     version_id = models.Version.objects.values('id').get(version=selected_version)['id']
-    if len(data_id_list) == 1:  # 只有一个查询id的情况下
-        data_id_list = [data_id_list[0], data_id_list[0]]
-    data_id_list = str(tuple(data_id_list))  # data_id_list = "(5, 6, 7, 8, 9, 10)"
+    data_id_list = list_to_str_tuple(data_id_list)
     thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
     update_data_id_set = set()
     dataset_id_list_obj = models.VersionToThcikness.objects.raw(
@@ -665,7 +661,7 @@ def deviation_rate_ajax(request, nid):
         data_list = []
         selected_version_list = request.POST.get('version').split(',')
         dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
-        dataset_id_list = str(tuple(dataset_id_list))
+        dataset_id_list = list_to_str_tuple(dataset_id_list)
 
         for version_item in selected_version_list:
             deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
@@ -792,6 +788,14 @@ def export_result(num):
     num_x, num_y = str(num).split('.')
     num = float(num_x + '.' + num_y[0:1])
     return num
+
+
+def list_to_str_tuple(id_list):
+    """id列表转字符串形式元组"""
+    if len(id_list) == 1:  # 只有一个查询id的情况下
+        id_list = [id_list[0], id_list[0]]
+    id_list = str(tuple(id_list))
+    return id_list
 
 
 def get_most_true_thickness(file_id):
