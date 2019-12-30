@@ -21,7 +21,11 @@ file_count = 0
 
 @csrf_exempt
 def tag_manage(request):
-    """标签管理"""
+    """
+    标签管理
+    :param request:
+    :return:
+    """
     file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
     count = file_tag_obj.count()
     try:
@@ -48,7 +52,11 @@ def tag_manage(request):
 
 @csrf_exempt
 def tag_manage_save_ajax(request):
-    """退出保存"""
+    """
+    退出保存
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': None}
     try:
         file_explain = request.POST.get('file-explain')
@@ -89,7 +97,12 @@ def tag_manage_save_ajax(request):
 
 
 def restart_run_alg(file_id, true_thickness):
-    """修改真实厚度值后，使用最新版本算法来重跑算法"""
+    """
+    修改手测厚度值后，使用最新版本算法来重跑算法
+    :param file_id: 文件ID
+    :param true_thickness: 手测厚度值
+    :return:
+    """
     prev_true_thickness = get_most_true_thickness(file_id)
     # 如果true_thickness更改，需要重跑算法
     if prev_true_thickness != float(true_thickness):
@@ -102,7 +115,11 @@ def restart_run_alg(file_id, true_thickness):
 
 @csrf_exempt
 def generate_dataset_by_file_ajax(request):
-    """通过文件生成数据集"""
+    """
+    通过文件生成数据集
+    :param request:
+    :return:
+    """
     try:
         time_and_id = []
         data_set_id = []
@@ -132,7 +149,11 @@ def generate_dataset_by_file_ajax(request):
 
 @csrf_exempt
 def remove_file_ajax(request):
-    """删除文件"""
+    """
+    删除文件
+    :param request:
+    :return:
+    """
     try:
         selected_file_id_list = eval(request.POST.get('selected_file_id_list'))
         if selected_file_id_list:
@@ -150,7 +171,11 @@ def remove_file_ajax(request):
 
 @csrf_exempt
 def search_file_ajax(request):
-    """按文件tag搜索"""
+    """
+    按文件tag搜索
+    :param request:
+    :return:
+    """
     try:
         search_value = request.POST.get('search_value')
         q = Q()
@@ -178,7 +203,13 @@ def search_file_ajax(request):
 
 @csrf_exempt
 def single_file_data(request, nid, version):
-    """单个文件的数据列表"""
+    """
+    单个文件的数据列表
+    :param request:
+    :param nid: 文件ID
+    :param version: 算法版本
+    :return:
+    """
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
     if not selected_version:  # 如果没有选择版本，默认使用最新版本
@@ -218,7 +249,11 @@ def single_file_data(request, nid, version):
 
 @csrf_exempt
 def single_file_run_alg_ajax(request):
-    """跑算法得出 单个文件 厚度值"""
+    """
+    跑算法得出 单个文件 厚度值
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': '算法执行失败'}
     try:
         file_id = request.POST.get('file_id')
@@ -241,7 +276,11 @@ def single_file_run_alg_ajax(request):
 
 @csrf_exempt
 def dataset_condition_list(request):
-    """数据集条件列表"""
+    """
+    数据集条件列表
+    :param request:
+    :return:
+    """
     all_dataset_obj = models.DataSetCondition.objects.all().order_by('-id')
     count = all_dataset_obj.count()
     try:
@@ -264,7 +303,11 @@ def dataset_condition_list(request):
 
 @csrf_exempt
 def save_dataset_tag_ajax(request):
-    """保存数据集tag"""
+    """
+    保存数据集tag
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': ''}
     try:
         dataset_id = request.POST.get('nid')
@@ -279,7 +322,12 @@ def save_dataset_tag_ajax(request):
 
 @csrf_exempt
 def single_dataset_list(request, nid):
-    """单个数据集列表"""
+    """
+    单个数据集列表
+    :param request:
+    :param nid: 数据集ID
+    :return:
+    """
     data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
     data_id_list = true_data_id_list(data_set_id)
@@ -317,7 +365,11 @@ def single_dataset_list(request, nid):
 
 
 def true_data_id_list(id_list):
-    """查找所有的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对"""
+    """
+    查找所有的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对
+    :param id_list: 要查询的数据id列表
+    :return:
+    """
     id_list = list_to_str_tuple(id_list)
     data_id_list = []
     data_id_list_obj = models.DataFile.objects.raw("select nid from thickness_datafile where nid in %s" % id_list)
@@ -328,7 +380,11 @@ def true_data_id_list(id_list):
 
 @csrf_exempt
 def dataset_run_alg_ajax(request):
-    """跑算法算出 数据集 厚度值"""
+    """
+    跑算法算出 数据集 厚度值
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': '算法执行失败'}
     try:
         import time
@@ -347,7 +403,12 @@ def dataset_run_alg_ajax(request):
 
 
 def handle_alg_process(data_id_list, selected_version):
-    """处理算法过程"""
+    """
+    处理算法过程
+    :param data_id_list: 要跑算法的数据id列表
+    :param selected_version: 选择的版本名称
+    :return:
+    """
     version_id = models.Version.objects.values('id').get(version=selected_version)['id']
     data_id_list = list_to_str_tuple(data_id_list)
     thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
@@ -387,7 +448,11 @@ def handle_alg_process(data_id_list, selected_version):
 
 @csrf_exempt
 def select_version_ajax(request):
-    """选择版本号，设置session值"""
+    """
+    选择版本号，设置session值
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': None}
     try:
         select_version = request.POST.get('version')
@@ -400,7 +465,11 @@ def select_version_ajax(request):
 
 @csrf_exempt
 def batch_save_true_thickness_ajax(request):
-    """批量保存手测厚度值"""
+    """
+    批量保存手测厚度值
+    :param request:
+    :return:
+    """
     try:
         true_thickness = float(request.POST.get('true_thickness'))
         selected_data_id_list = eval(request.POST.get('selected_data_id_list'))
@@ -425,7 +494,11 @@ def batch_save_true_thickness_ajax(request):
 
 @csrf_exempt
 def remove_data_ajax(request):
-    """删除数据"""
+    """
+    删除数据
+    :param request:
+    :return:
+    """
     try:
         selected_data_id_list = eval(request.POST.get('selected_data_id_list'))
         for nid in selected_data_id_list:
@@ -440,7 +513,11 @@ def remove_data_ajax(request):
 
 @csrf_exempt
 def remove_dataset_ajax(request):
-    """删除数据集"""
+    """
+    删除数据集
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': '删除数据集失败'}
     try:
         nid = request.POST.get('nid')
@@ -452,7 +529,13 @@ def remove_dataset_ajax(request):
 
 
 def data_2048_chart(request, nid, thickness):
-    """单条数据波形图和详细信息"""
+    """
+    单条数据波形图和详细信息
+    :param request:
+    :param nid: 数据ID
+    :param thickness: 跑算法的厚度值
+    :return:
+    """
     data_obj = models.DataFile.objects.values('message_body_data', 'message_head', 'create_time',
                                                               'message_body_param', 'file_name_id',
                                                               'true_thickness').get(nid=nid)
@@ -484,8 +567,9 @@ def data_2048_chart(request, nid, thickness):
 
 
 class UploadFileView(View):
-    """上传文件"""
-
+    """
+    上传文件
+    """
     @method_decorator(csrf_exempt)  # CSRF Token相关装饰器在CBV只能加到dispatch方法上
     def dispatch(self, request, *args, **kwargs):
         return super(UploadFileView, self).dispatch(request, *args, **kwargs)
@@ -524,8 +608,11 @@ class UploadFileView(View):
         return HttpResponse(json.dumps(result))
 
 
-def callback_zero(request):
-    """上传文件的回调清零"""
+def callback_zero():
+    """
+    上传文件的回调清零
+    :return:
+    """
     global file_count
     file_count = 0
     readfiles.success_count = 0
@@ -535,8 +622,9 @@ def callback_zero(request):
 
 
 class GenerateDataSetView(View):
-    """生成数据集"""
-
+    """
+    生成数据集
+    """
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(GenerateDataSetView, self).dispatch(request, *args, **kwargs)
@@ -566,7 +654,11 @@ class GenerateDataSetView(View):
         return render(request, 'thickness/generate_dataset.html', locals())
 
     def post(self, request):
-        """生成数据集html代码"""
+        """
+        生成数据集html代码
+        :param request:
+        :return:
+        """
         ele = ''
         script = """layui.use('slider', function(){
                       var slider = layui.slider;"""
@@ -612,7 +704,11 @@ class GenerateDataSetView(View):
 
 @csrf_exempt
 def generate_dataset_ajax(request):
-    """取出选中数据的时间和id范围，去数据库中取出数据id,并把数据id持久化"""
+    """
+    取出选中数据的时间和id范围，去数据库中取出数据id,并把数据id持久化
+    :param request:
+    :return:
+    """
     result = {'status': False, 'message': '生成id数据集失败'}
     try:
         import time
@@ -642,8 +738,9 @@ def generate_dataset_ajax(request):
 
 
 class DeviationRate(View):
-    """显示柱状图偏差率"""
-
+    """
+    显示柱状图偏差率
+    """
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(DeviationRate, self).dispatch(request, *args, **kwargs)
@@ -656,7 +753,12 @@ class DeviationRate(View):
 
 @csrf_exempt
 def deviation_rate_ajax(request, nid):
-    """偏差率ajax"""
+    """
+    偏差率ajax
+    :param request:
+    :param nid: 数据集id
+    :return:
+    """
     try:
         data_list = []
         selected_version_list = request.POST.get('version').split(',')
@@ -701,7 +803,12 @@ def deviation_rate_ajax(request, nid):
 
 @csrf_exempt
 def column_click_event_ajax(request, nid):
-    """柱状图点击事件"""
+    """
+    柱状图点击事件
+    :param request:
+    :param nid: 数据集id
+    :return:
+    """
     selected_data_id = []
     version = request.POST.get('version')
     deviation = request.POST.get('deviation')
@@ -744,7 +851,11 @@ def column_click_event_ajax(request, nid):
 
 @csrf_exempt
 def submit_true_thickness(request):
-    """提交设置手测厚度"""
+    """
+    提交设置手测厚度
+    :param request:
+    :return:
+    """
     try:
         true_thickness = float(request.POST.get('true_thickness'))
         data_id = request.POST.get('nid')
@@ -767,8 +878,20 @@ def submit_true_thickness(request):
     return HttpResponse(json.dumps(result))
 
 
+@csrf_exempt
+def alg_api():
+    """
+    算法api
+    :return:
+    """
+    pass
+
+
 def clear_repeat_imgs():
-    """清理重复图片"""
+    """
+    清理重复图片
+    :return:
+    """
     db_img_set = set()
     tag_content_obj = models.DataTag.objects.values('tag_content').all()
     for item in tag_content_obj:
@@ -784,14 +907,22 @@ def clear_repeat_imgs():
 
 
 def export_result(num):
-    """不四舍五入保留1位小数"""
+    """
+    不四舍五入保留1位小数
+    :param num: 要处理的浮点数
+    :return: 保留一位小数并且不丢失精度
+    """
     num_x, num_y = str(num).split('.')
     num = float(num_x + '.' + num_y[0:1])
     return num
 
 
 def list_to_str_tuple(id_list):
-    """id列表转字符串形式元组"""
+    """
+    id列表转字符串形式元组
+    :param id_list: 要处理的列表
+    :return: 字符串形式的元组
+    """
     if len(id_list) == 1:  # 只有一个查询id的情况下
         id_list = [id_list[0], id_list[0]]
     id_list = str(tuple(id_list))
@@ -799,6 +930,13 @@ def list_to_str_tuple(id_list):
 
 
 def get_most_true_thickness(file_id):
+    """
+    一个文件中一般都是同一个手测的厚度值，但是也有可能有个别数据是其他手测厚度，
+    所以为了显示当前文件的手测厚度值，需要找出sample_list中出现最多的手测厚度数据，
+    以代表当前文件数据的手测厚度
+    :param file_id: 文件id
+    :return:
+    """
     true_thickness_obj = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)
     random.shuffle(list(true_thickness_obj))
     sample_list = [item['true_thickness'] for item in true_thickness_obj[:20]]
@@ -809,6 +947,11 @@ def get_most_true_thickness(file_id):
 
 
 def showmax(sample_list):
+    """
+    找出出现次数最多的手测厚度值
+    :param sample_list: 
+    :return: 
+    """
     index1 = 0  # 记录出现次数最多的元素下标
     max_num = 0  # 记录最大的元素出现次数
     for i in range(len(sample_list)):
@@ -823,7 +966,12 @@ def showmax(sample_list):
 
 
 def pager(request, data_obj):
-    """分页"""
+    """
+    分页
+    :param request:
+    :param data_obj: 要分页的数据对象
+    :return:
+    """
     result = {'status': False, 'data_list': []}
     limit = int(request.POST.get('limit'))  # 每页显示的条数
     curr_page = int(request.POST.get('curr_page'))
@@ -841,7 +989,11 @@ def pager(request, data_obj):
 
 
 def page_404(request):
-    """404页面"""
+    """
+    404页面
+    :param request:
+    :return:
+    """
     return render(request, 'thickness/404.html')
 
 
