@@ -120,7 +120,7 @@
             var version = formSelects.value('version', 'valStr');
             //console.log(version);
             $.ajax({
-                url: '/thickness/deviation-rate-ajax/{{ nid }}/',
+                url: '/thickness/deviation-rate-ajax/{{ dataset_id }}/',
                 type: 'POST',
                 data: {'version': version},
                 dataType: 'JSON',
@@ -136,7 +136,7 @@
 
         function loadData() {
             $.ajax({
-                url: '/thickness/column-click-event-ajax/{{ nid }}/',
+                url: '/thickness/column-click-event-ajax/{{ dataset_id }}/',
                 type: 'POST',
                 data: {'version': version,
                         'deviation': deviation,

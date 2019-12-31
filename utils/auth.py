@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding:utf-8 -*-
 import time
 import hashlib
 from MeasureThickness.settings import ALG_AUTH_KEY
@@ -7,7 +5,8 @@ from MeasureThickness.settings import ALG_AUTH_HEADER_NAME
 from MeasureThickness.settings import ALG_AUTH_TIME
 from django.http import JsonResponse
 
-ENCRYPT_LIST = [
+
+encrypt_list = [
     # {'encrypt': encrypt, 'time': timestamp
 ]
 
@@ -44,7 +43,7 @@ def api_auth_method(request):
     # 检查列表中已经存在，并且对已经失效的列表元素进行清除
     exist = False
     del_keys = []
-    for k, v in enumerate(ENCRYPT_LIST):
+    for k, v in enumerate(encrypt_list):
         print(k, v)
         m = v['time']
         n = v['encrypt']
@@ -54,11 +53,11 @@ def api_auth_method(request):
         if n == encrypt:
             exist = True
     for k in del_keys:
-        del ENCRYPT_LIST[k]
+        del encrypt_list[k]
 
     if exist:
         return False
-    ENCRYPT_LIST.append({'encrypt': encrypt, 'time': timestamp})
+    encrypt_list.append({'encrypt': encrypt, 'time': timestamp})
     return True
 
 

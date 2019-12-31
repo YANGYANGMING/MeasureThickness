@@ -18,6 +18,8 @@ from thickness import models
 import random
 import json
 
+
+scheduler = BackgroundScheduler()
 handledataset = HandleDataSet()
 handleimgs = HandleImgs()
 file_count = 0
@@ -754,22 +756,22 @@ class DeviationRate(View):
 
     def get(self, request, *args, **kwargs):
         version_obj = models.Version.objects.values('version').order_by('-id')
-        nid = args[0]  # 数据集id
+        dataset_id = args[0]  # 数据集id
         return render(request, 'thickness/deviation_rate.html', locals())
 
 
 @csrf_exempt
-def deviation_rate_ajax(request, nid):
+def deviation_rate_ajax(request, dataset_id):
     """
     偏差率ajax
     :param request:
-    :param nid: 数据集id
+    :param dataset_id: 数据集id
     :return:
     """
     try:
         data_list = []
         selected_version_list = request.POST.get('version').split(',')
-        dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
+        dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=dataset_id)['data_set_id'])
         dataset_id_list = list_to_str_tuple(dataset_id_list)
 
         for version_item in selected_version_list:
@@ -796,8 +798,8 @@ def deviation_rate_ajax(request, nid):
                 else:
                     deviation_range[1.0] = deviation_range[1.0] + 1
             # print(deviation_range)
-            cache.set('data_id_and_devation_dict_' + version_item + '_' + nid, data_id_and_devation_dict, 600)
-            cache.set('deviation_range_' + version_item + '_' + nid, deviation_range, 600)
+            cache.set('data_id_and_devation_dict_' + version_item + '_' + dataset_id, data_id_and_devation_dict, 600)
+            cache.set('deviation_range_' + version_item + '_' + dataset_id, deviation_range, 600)
             deviation_num = [v for k, v in deviation_range.items()]
             data_list.append({'name': version_item, 'data': deviation_num})
 
@@ -809,18 +811,18 @@ def deviation_rate_ajax(request, nid):
 
 
 @csrf_exempt
-def column_click_event_ajax(request, nid):
+def column_click_event_ajax(request, dataset_id):
     """
     柱状图点击事件
     :param request:
-    :param nid: 数据集id
+    :param dataset_id: 数据集id
     :return:
     """
     selected_data_id = []
     version = request.POST.get('version')
     deviation = request.POST.get('deviation')
-    data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version + '_' + nid)
-    deviation_range = cache.get('deviation_range_' + version + '_' + nid)
+    data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version + '_' + dataset_id)
+    deviation_range = cache.get('deviation_range_' + version + '_' + dataset_id)
     if data_id_and_devation_dict and deviation_range:  # 如果有缓存
         selected_deviation = deviation.split('-')[0]
         for k, v in data_id_and_devation_dict[version].items():
@@ -885,16 +887,20 @@ def submit_true_thickness(request):
     return HttpResponse(json.dumps(result))
 
 
-
 class AlgAPI(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(AlgAPI, self).dispatch(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        print(request.GET)
+        response = {'status': True, 'data': ['V-2.0', 'V-3.0']}
+        return JsonResponse(response)
+
     @method_decorator(auth.alg_api_auth)
     def post(self, request, *args, **kwargs):
         """
-        算法api
+        算法api：接收算法api发送过来的更新的算法信息
         :param request:
         :param args:
         :param kwargs:
@@ -902,6 +908,7 @@ class AlgAPI(View):
         """
         alg_info = json.loads(request.body.decode('utf-8'))
         print(alg_info)
+
 
         result = {'status': True, 'message': None}
 
@@ -1020,10 +1027,8 @@ def page_404(request):
 
 try:
     """定时初始化"""
-    scheduler = BackgroundScheduler()
     scheduler.add_job(clear_repeat_imgs, 'cron', day_of_week='0,2,4', hour='10', id='cron_time')
     scheduler.start()
-
 except Exception as e:
     print('err:', e)
     scheduler.shutdown()
@@ -1032,7 +1037,7 @@ except Exception as e:
 @csrf_exempt
 def test(request):
     t1 = time.time()
-    run_alg_thickness = models.VersionToThcikness.objects.filter(data_id=20, version=3).values('run_alg_thickness')[0]['run_alg_thickness']
+
 
     t2 = time.time()
     print(t2 - t1)

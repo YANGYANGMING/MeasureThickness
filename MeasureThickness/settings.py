@@ -135,6 +135,6 @@ LOGIN_URL = '/login/'
 
 Base_img_path = 'static/upload-imgs/'
 
-ALG_AUTH_KEY = '299095cc-1330-11e5-b06a-a45e60bec08b'
+ALG_AUTH_KEY = '2990-95cc-1330-11e5-b06a-a45e-60be-c08b'
 ALG_AUTH_HEADER_NAME = 'HTTP_AUTH_KEY'
 ALG_AUTH_TIME = 2

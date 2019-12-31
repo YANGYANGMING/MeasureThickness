@@ -39,6 +39,7 @@ class VersionToThcikness(models.Model):
 class Version(models.Model):
     """版本号"""
     version = models.CharField(max_length=64, unique=True)
+    create_time = models.CharField(max_length=64)
 
 
 
