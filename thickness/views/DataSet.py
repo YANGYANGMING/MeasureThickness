@@ -211,11 +211,11 @@ def search_file_ajax(request):
 
 
 @csrf_exempt
-def single_file_data(request, nid, version):
+def single_file_data(request, file_id, version):
     """
     单个文件的数据列表
     :param request:
-    :param nid: 文件ID
+    :param file_id: 文件ID
     :param version: 算法版本
     :return:
     """
@@ -224,12 +224,12 @@ def single_file_data(request, nid, version):
     if not selected_version:  # 如果没有选择版本，默认使用最新版本
         selected_version = models.Version.objects.values('version').last()['version']
     version_obj = models.Version.objects.values('version').order_by('-id')
-    data_obj = models.DataFile.objects.filter(file_name_id=nid).order_by('nid')
+    data_obj = models.DataFile.objects.filter(file_name_id=file_id).order_by('nid')
     count = data_obj.count()
     try:
-        file_obj = data_obj.values('file_name_id', 'file_name__file_name').first()
+        file_obj = data_obj.values('file_name__file_name').first()
         file_name = file_obj['file_name__file_name']
-        file_id = file_obj['file_name_id']
+        # file_id = file_obj['file_name_id']
     except:
         pass
 
@@ -319,7 +319,7 @@ def save_dataset_tag_ajax(request):
     """
     result = {'status': False, 'message': ''}
     try:
-        dataset_id = request.POST.get('nid')
+        dataset_id = request.POST.get('dataset_id')
         dataset_tag = request.POST.get('dataset-tag')
         models.DataSetCondition.objects.filter(id=dataset_id).update(dataset_tag=dataset_tag)
         result = {'status': True, 'message': '数据集tag修改成功'}
@@ -330,14 +330,14 @@ def save_dataset_tag_ajax(request):
 
 
 @csrf_exempt
-def single_dataset_list(request, nid):
+def single_dataset_list(request, dataset_id):
     """
     单个数据集列表
     :param request:
-    :param nid: 数据集ID
+    :param dataset_id: 数据集ID
     :return:
     """
-    data_time_condition_obj = models.DataSetCondition.objects.filter(id=nid).values('time_and_id', 'data_set_id')[0]
+    data_time_condition_obj = models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
     data_id_list = true_data_id_list(data_set_id)
     count = len(data_id_list)
@@ -398,9 +398,9 @@ def dataset_run_alg_ajax(request):
     try:
         import time
         tt1 = time.time()
-        nid = request.POST.get('nid')
+        dataset_id = request.POST.get('dataset_id')
         selected_version = request.POST.get('selected_version')
-        data_set_id_obj = models.DataSetCondition.objects.filter(id=nid).values('data_set_id')
+        data_set_id_obj = models.DataSetCondition.objects.filter(id=dataset_id).values('data_set_id')
         data_id_list = eval(data_set_id_obj[0]['data_set_id'])
         handle_alg_process(data_id_list, selected_version)
         tt2 = time.time()
@@ -529,25 +529,25 @@ def remove_dataset_ajax(request):
     """
     result = {'status': False, 'message': '删除数据集失败'}
     try:
-        nid = request.POST.get('nid')
-        models.DataSetCondition.objects.filter(id=nid).delete()
+        dataset_id = request.POST.get('dataset_id')
+        models.DataSetCondition.objects.filter(id=dataset_id).delete()
         result = {'status': True, 'message': '删除数据集成功'}
     except Exception as e:
         print(e, "删除数据集出错！")
     return HttpResponse(json.dumps(result))
 
 
-def data_2048_chart(request, nid, thickness):
+def data_2048_chart(request, data_id, thickness):
     """
     单条数据波形图和详细信息
     :param request:
-    :param nid: 数据ID
+    :param data_id: 数据ID
     :param thickness: 跑算法的厚度值
     :return:
     """
     data_obj = models.DataFile.objects.values('message_body_data', 'message_head', 'create_time',
                                                               'message_body_param', 'file_name_id',
-                                                              'true_thickness').get(nid=nid)
+                                                              'true_thickness').get(nid=data_id)
     #处理数据
     message_head = eval(data_obj['message_head'])
     data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])  # ' 3X,6144'
@@ -576,33 +576,45 @@ def data_2048_chart(request, nid, thickness):
 
 
 class UploadFileView(View):
-    """
-    上传文件
-    """
     @method_decorator(csrf_exempt)  # CSRF Token相关装饰器在CBV只能加到dispatch方法上
     def dispatch(self, request, *args, **kwargs):
         return super(UploadFileView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        """
+        上传文件
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         return render(request, "thickness/upload_file.html")
 
     def post(self, request, *args, **kwargs):
+        """
+        读取文件并处理文件数据，数据库持久化，
+        计算成功存储数据条数、成功存储文件个数，
+        显示存储失败文件名列表
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         result = {'status': False, 'code': 1, 'percent': 0, 'success_count': 0, 'file_fail_list': [], 'done_status': False}
-
         try:
             import time
             start = time.time()
             file_num = int(request.POST['file_num'])
-            print('file_num', file_num)
+            # print('file_num', file_num)
             file = request.FILES['file']
             read_file = ReadFlies(file)
             success_count, file_fail_list = read_file.handle_files()
-            print(success_count, file_fail_list)
+            # print(success_count, file_fail_list)
             global file_count
             file_count += 1
-            print('file_count', file_count)
+            # print('file_count', file_count)
             percent = round(file_count/file_num*100)
-            print('percent', percent)
+            # print('percent', percent)
             done_status = False
             if file_count >= file_num:
                 done_status = True
@@ -631,14 +643,16 @@ def callback_zero():
 
 
 class GenerateDataSetView(View):
-    """
-    生成数据集
-    """
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super(GenerateDataSetView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request):
+        """
+        生成数据集
+        :param request:
+        :return:
+        """
         i = 0
         data_time_list = []
         data_time_temp = []

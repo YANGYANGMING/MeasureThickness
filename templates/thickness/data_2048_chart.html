@@ -22,7 +22,7 @@
                     <div class="layui-card-body" style="height: 250px;">
                         所在文件：{{ file_name }}<br>
                         创建时间：{{ create_time }}<br>
-                        数据ID: {{ nid }}<br>
+                        数据ID: {{ data_id }}<br>
                         {% for k, v in message_head.items %}
                             {{ k }}：{{ v }}<br>
                         {% endfor %}
@@ -84,7 +84,7 @@
                     shadow: true,
                 },
                 title: {
-                    text: 'ID值: ' + {{ nid }}
+                    text: 'ID值: ' + {{ data_id }}
                 },
                 xAxis: {
                     type: 'linear',
@@ -128,7 +128,7 @@
             $.ajax({
                 url: '/thickness/submit-true-thickness-ajax/',
                 type: 'POST',
-                data: {'true_thickness': true_thickness, 'nid': {{ nid }}},
+                data: {'true_thickness': true_thickness, 'nid': {{ data_id }}},
                 dataType: 'JSON',
                 success: function (arg) {
                     if(arg.status){

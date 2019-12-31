@@ -6,7 +6,7 @@ handledataset = HandleDataSet()
 file_fail_list = []
 
 class FileType(object):
-    """根据文件类型使用对应的处理方式"""
+    """根据文件类型使用对应的数据处理方式"""
     def __init__(self, file_obj, storage):
         self.file_obj = file_obj
         self.storage = storage

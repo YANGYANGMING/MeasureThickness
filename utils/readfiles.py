@@ -10,7 +10,10 @@ class ReadFlies(object):
         self.file_obj = file_obj
 
     def handle_files(self):
-        """读取/判断/处理/存储文件内容"""
+        """
+        读取/判断/处理/存储文件内容
+        :return:
+        """
         file_type = FileType(self.file_obj, self.storage)
         Suffix = "_" + self.file_obj.name.rsplit('.', 1)[1]
         func = getattr(file_type, Suffix)
@@ -18,7 +21,11 @@ class ReadFlies(object):
         return success_count, file_fail_list
 
     def storage(self, data_list):
-        """持久化"""
+        """
+        批量插入持久化
+        :param data_list: 要批量插入存储的数据对象列表
+        :return:
+        """
         import time
         global success_count
         start = time.time()

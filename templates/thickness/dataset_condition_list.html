@@ -119,20 +119,20 @@
             var version = formSelects.value('version', 'valStr');
             console.log('2', version);
             var $td = $(ths).parent().parent().children();
-            var nid = $td.eq(1).text();
+            var dataset_id = $td.eq(1).text();
             $.ajax({
                 url: '/thickness/dataset-run-alg-ajax/',
                 type: 'POST',
-                data: {'nid': nid, 'selected_version': version},
+                data: {'dataset_id': dataset_id, 'selected_version': version},
                 dataType: 'JSON',
                 success:function (arg) {
                     layer.closeAll('loading'); //关闭loading
                     if(arg.status){
-                            $('#run-alg-msg-'+nid).text(arg.message);
-                            ClearMSG('run-alg-msg-'+nid);
+                            $('#run-alg-msg-'+dataset_id).text(arg.message);
+                            ClearMSG('run-alg-msg-'+dataset_id);
                         }else{
-                            $('#run-alg-msg-'+nid).text(arg.message);
-                            ClearMSG('run-alg-msg-'+nid);
+                            $('#run-alg-msg-'+dataset_id).text(arg.message);
+                            ClearMSG('run-alg-msg-'+dataset_id);
                         }
                     }
                  })
@@ -145,20 +145,20 @@
               ,yes: function(index){
                 layer.close(index);
                 var $td = $(ths).parent().parent().children();
-                var nid = $td.eq(1).text();
+                var dataset_id = $td.eq(1).text();
                 $.ajax({
                     url: '/thickness/remove-dataset-ajax/',
                     type: 'POST',
-                    data: {'nid': nid},
+                    data: {'dataset_id': dataset_id},
                     dataType: 'JSON',
                     success:function (arg) {
                         if(arg.status){
-                                $('#run-alg-msg-'+nid).text(arg.message);
-                                ClearMSG('run-alg-msg-'+nid);
+                                $('#run-alg-msg-'+dataset_id).text(arg.message);
+                                ClearMSG('run-alg-msg-'+dataset_id);
                                 $(ths).parent().parent().remove()
                             }else{
-                                $('#run-alg-msg-'+nid).text(arg.message);
-                                ClearMSG('run-alg-msg-'+nid);
+                                $('#run-alg-msg-'+dataset_id).text(arg.message);
+                                ClearMSG('run-alg-msg-'+dataset_id);
                             }
                         }
                      })
@@ -236,9 +236,9 @@
         function trOutEditMode($tr){
             //退出编辑并保存
             $tr.removeClass('success');
-            var nid = $tr.children().eq(1).html();
+            var dataset_id = $tr.children().eq(1).html();
             var fd = new FormData();
-            fd.append('nid', nid);
+            fd.append('dataset_id', dataset_id);
             $tr.children().each(function () {
                 //$(this) = td
                 var editEnable = $(this).attr('edit-enable');
