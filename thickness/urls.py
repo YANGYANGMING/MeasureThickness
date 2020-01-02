@@ -38,8 +38,8 @@ urlpatterns = [
     re_path(r'^data-2048-chart/(\d+)/(-?\d+\.?\d*)$', DataSet.data_2048_chart, name='data_2048_chart'),
     re_path(r'^submit-true-thickness-ajax/$', DataSet.submit_true_thickness),
 
-    re_path(r'^deviation-rate/(\d+)/$', DataSet.DeviationRate.as_view()),
-    re_path(r'^deviation-rate-ajax/(\d+)/$', DataSet.deviation_rate_ajax),
+    re_path(r'^deviation-rate/(\d+)/(\w+)/$', DataSet.DeviationRate.as_view()),
+    re_path(r'^deviation-rate-ajax/(\d+)/(\w+)/$', DataSet.deviation_rate_ajax),
     re_path(r'^column-click-event-ajax/(\d+)/$', DataSet.column_click_event_ajax),
 
     re_path(r'^alg-api/$', DataSet.AlgAPI.as_view()),

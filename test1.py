@@ -243,6 +243,7 @@ li = "(3, 4, 11, 12, 13)"
 #
 # file_obj = data_obj.values('file_name_id', 'file_name__file_name').first()
 # print(file_obj)
-data_id_list = "(123, 123)"
-data_id_list = set(eval(data_id_list))
+data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=28)
+
+data_id_list = [i['nid'] for i in data_id_list]
 print(data_id_list)

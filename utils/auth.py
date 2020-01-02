@@ -44,7 +44,7 @@ def api_auth_method(request):
     exist = False
     del_keys = []
     for k, v in enumerate(encrypt_list):
-        print(k, v)
+        # print(k, v)
         m = v['time']
         n = v['encrypt']
         if m < limit_timestamp:

@@ -18,7 +18,6 @@ from thickness import models
 import random
 import json
 
-
 scheduler = BackgroundScheduler()
 handledataset = HandleDataSet()
 handleimgs = HandleImgs()
@@ -135,7 +134,8 @@ def generate_dataset_by_file_ajax(request):
         selected_data_id_list = eval(request.POST.get('selected_data_id_list'))
         if selected_data_id_list:
             for file_id in selected_data_id_list:
-                create_time = str(models.DataFile.objects.values('create_time').filter(file_name_id=file_id)[0]['create_time'])
+                create_time = str(
+                    models.DataFile.objects.values('create_time').filter(file_name_id=file_id)[0]['create_time'])
                 temp_id = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
                 first_id = temp_id.first()['nid']
                 last_id = temp_id.last()['nid']
@@ -220,6 +220,7 @@ def single_file_data(request, file_id, version):
     :return:
     """
     # 从session中获取selected_version
+    data_type = "file"
     selected_version = request.session.get('selected_version')
     if not selected_version:  # 如果没有选择版本，默认使用最新版本
         selected_version = models.Version.objects.values('version').last()['version']
@@ -243,13 +244,18 @@ def single_file_data(request, file_id, version):
         single_file_obj = []
         for item in result['data_list']:
             try:
-                versionTothcikness_obj = item.versiontothcikness_set.filter(version__version=selected_version).values('data_id', 'version__version', 'run_alg_thickness')[0]
+                versionTothcikness_obj = \
+                item.versiontothcikness_set.filter(version__version=selected_version).values('data_id',
+                                                                                             'version__version',
+                                                                                             'run_alg_thickness')[0]
             except:  # 如果该数据没有跑算法
                 versionTothcikness_obj = {}
                 versionTothcikness_obj['data_id'] = item.nid
                 versionTothcikness_obj['version__version'] = selected_version
                 versionTothcikness_obj['run_alg_thickness'] = None
-            true_thickness = models.DataFile.objects.values('true_thickness').filter(nid=versionTothcikness_obj['data_id'])[0]['true_thickness']
+            true_thickness = \
+            models.DataFile.objects.values('true_thickness').filter(nid=versionTothcikness_obj['data_id'])[0][
+                'true_thickness']
             versionTothcikness_obj['true_thickness'] = true_thickness
             single_file_obj.append(versionTothcikness_obj)
             result['data_list'] = single_file_obj
@@ -275,7 +281,7 @@ def single_file_run_alg_ajax(request):
         t1 = time.time()
         handle_alg_process(data_id_list, selected_version)
         t2 = time.time()
-        print('文件算法时间：', t2 -t1)
+        print('文件算法时间：', t2 - t1)
         result = {'status': True, 'message': '算法执行成功'}
 
     except Exception as e:
@@ -337,7 +343,9 @@ def single_dataset_list(request, dataset_id):
     :param dataset_id: 数据集ID
     :return:
     """
-    data_time_condition_obj = models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
+    data_type = "data_set"
+    data_time_condition_obj = \
+    models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
     data_id_list = true_data_id_list(data_set_id)
     count = len(data_id_list)
@@ -423,7 +431,8 @@ def handle_alg_process(data_id_list, selected_version):
     thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
     update_data_id_set = set()
     dataset_id_list_obj = models.VersionToThcikness.objects.raw(
-        "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (data_id_list, version_id))
+        "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+        data_id_list, version_id))
     # 用于update
     for data_item in dataset_id_list_obj:
         try:
@@ -454,6 +463,7 @@ def handle_alg_process(data_id_list, selected_version):
             # print('create')
         except Exception as e:
             pass
+
 
 @csrf_exempt
 def select_version_ajax(request):
@@ -546,9 +556,9 @@ def data_2048_chart(request, data_id, thickness):
     :return:
     """
     data_obj = models.DataFile.objects.values('message_body_data', 'message_head', 'create_time',
-                                                              'message_body_param', 'file_name_id',
-                                                              'true_thickness').get(nid=data_id)
-    #处理数据
+                                              'message_body_param', 'file_name_id',
+                                              'true_thickness').get(nid=data_id)
+    # 处理数据
     message_head = eval(data_obj['message_head'])
     data_len = int(message_head.get('Range', '2048').strip('\n').split(',')[-1])  # ' 3X,6144'
     message_body_data = data_obj['message_body_data'].tobytes()
@@ -557,7 +567,7 @@ def data_2048_chart(request, data_id, thickness):
         message_body_param = eval(data_obj['message_body_param'])
     else:
         message_body_param = ""
-    #传给前端的数据
+    # 传给前端的数据
     true_thickness = data_obj['true_thickness']
     data_list = json.dumps(list(enumerate(data)))
     create_time = str(data_obj['create_time'])
@@ -600,7 +610,8 @@ class UploadFileView(View):
         :param kwargs:
         :return:
         """
-        result = {'status': False, 'code': 1, 'percent': 0, 'success_count': 0, 'file_fail_list': [], 'done_status': False}
+        result = {'status': False, 'code': 1, 'percent': 0, 'success_count': 0, 'file_fail_list': [],
+                  'done_status': False}
         try:
             import time
             start = time.time()
@@ -613,15 +624,16 @@ class UploadFileView(View):
             global file_count
             file_count += 1
             # print('file_count', file_count)
-            percent = round(file_count/file_num*100)
+            percent = round(file_count / file_num * 100)
             # print('percent', percent)
             done_status = False
             if file_count >= file_num:
                 done_status = True
 
-            result = {'status': True, 'code': 0, 'percent': percent, 'success_count': success_count, 'file_fail_list': file_fail_list, 'done_status': done_status}
+            result = {'status': True, 'code': 0, 'percent': percent, 'success_count': success_count,
+                      'file_fail_list': file_fail_list, 'done_status': done_status}
             end = time.time()
-            print('总用时%s' % (end-start))
+            print('总用时%s' % (end - start))
 
         except Exception as e:
             print(e, '上传失败')
@@ -656,12 +668,12 @@ class GenerateDataSetView(View):
         i = 0
         data_time_list = []
         data_time_temp = []
-        #{"value": "1", "title": "2019-09-20"}
+        # {"value": "1", "title": "2019-09-20"}
 
         time_list = models.DataFile.objects.all().values('create_time').distinct()
         for item in time_list:
             data_time_temp.append(str(item['create_time']))
-        data_time_temp = sorted(data_time_temp)    #['2019-09-20', '2019-09-21', '2019-09-22', '2019-09-23']
+        data_time_temp = sorted(data_time_temp)  # ['2019-09-20', '2019-09-21', '2019-09-22', '2019-09-23']
         data_time_temp.reverse()
 
         for data_time in data_time_temp:
@@ -703,7 +715,7 @@ class GenerateDataSetView(View):
                             <input type="text" style="display: none;" id="first-id-%s" value="">
                             <input type="text" style="display: none;" id="second-id-%s" value="">
                         </div>
-                    """ % (item['title'], item['title'], item['title'],  item['title'], item['title'])
+                    """ % (item['title'], item['title'], item['title'], item['title'], item['title'])
 
                 script += """
                           slider.render({
@@ -717,7 +729,7 @@ class GenerateDataSetView(View):
                                   $('#first-id-%s').val(value[0]);
                                   $('#second-id-%s').val(value[1]);
                                   }
-                              });""" % (item['title'], start_id, end_id, item['title'], item['title'], )
+                              });""" % (item['title'], start_id, end_id, item['title'], item['title'],)
             script += "});"
             # param_list.append({'time': item['title'], 'start_id': start_id, 'end_id': end_id})
             result = {'status': True, 'message': mark_safe(ele), 'script': mark_safe(script)}
@@ -736,16 +748,18 @@ def generate_dataset_ajax(request):
     try:
         import time
         result_list = []
-        input_list = json.loads(request.POST.get('input_list'))  # ['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
+        input_list = json.loads(request.POST.get(
+            'input_list'))  # ['2019-09-18', '', '', '2019-09-08', '', '', '2019-09-19', '', '', '2019-09-17', '', '']
         for i in range(0, len(input_list), 3):
-            result_list.append(input_list[i: i+3])
+            result_list.append(input_list[i: i + 3])
         print(result_list)  # [['2019-09-20', '5', '7'], ]        range(4,12)   choose(5,7)
         for data_item in result_list:  # 制作数据集时如果没有滑动滑条选取数据，默认选取当前日期的第一条数据
             if data_item[1] == '' and data_item[2] == '':
                 nid = int(models.DataFile.objects.filter(create_time=data_item[0]).values('nid')[0]['nid'])
                 data_item[1] = data_item[2] = nid
         # 取出已选中的数据id
-        choose_dataset_id_list = handledataset.get_selected_data(result_list)    # choose_dataset_id_list = [5, 6, 7, 20, 21]
+        choose_dataset_id_list = handledataset.get_selected_data(
+            result_list)  # choose_dataset_id_list = [5, 6, 7, 20, 21]
         # 存入数据库
         if choose_dataset_id_list:
             start = time.time()
@@ -770,73 +784,92 @@ class DeviationRate(View):
 
     def get(self, request, *args, **kwargs):
         version_obj = models.Version.objects.values('version').order_by('-id')
-        dataset_id = args[0]  # 数据集id
+        nid = args[0]  # 数据集id或者文件id
+        data_type = args[1]
         return render(request, 'thickness/deviation_rate.html', locals())
 
 
 @csrf_exempt
-def deviation_rate_ajax(request, dataset_id):
+def deviation_rate_ajax(request, nid, data_type):
     """
-    偏差率ajax
+    显示数据集偏差率ajax
     :param request:
-    :param dataset_id: 数据集id
+    :param nid: 数据集id或者文件id
     :return:
     """
     try:
-        data_list = []
+        data_id_list = []
         selected_version_list = request.POST.get('version').split(',')
-        dataset_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=dataset_id)['data_set_id'])
-        dataset_id_list = list_to_str_tuple(dataset_id_list)
+        if data_type == "data_set":
+            data_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
+            data_id_list = list_to_str_tuple(data_id_list)
+        elif data_type == "file":
+            data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=nid)
+            data_id_list = [i['nid'] for i in data_id_list]
+            data_id_list = list_to_str_tuple(data_id_list)
 
-        for version_item in selected_version_list:
-            deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
-            data_id_and_deviation = {}
-            data_id_and_devation_dict = {}
-            version_id = models.Version.objects.values('id').get(version=version_item)['id']
-            t1 = time.time()
-            try:  # 批量查找
-                dataset_id_list_obj = models.VersionToThcikness.objects.raw("select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (dataset_id_list, version_id))
-                for data_item in dataset_id_list_obj:
-                    data_id = data_item.data_id_id
-                    deviation = data_item.deviation
-                    data_id_and_deviation[data_id] = deviation
-            except:
-                pass
-            t2 = time.time()
-            print(t2 - t1)
-            data_id_and_devation_dict[version_item] = data_id_and_deviation
-            for k_data_id, v_deviation_item in data_id_and_devation_dict[version_item].items():
-                judge_range = deviation_range.get(v_deviation_item)
-                if judge_range or judge_range == 0:
-                    deviation_range[v_deviation_item] = deviation_range[v_deviation_item] + 1
-                else:
-                    deviation_range[1.0] = deviation_range[1.0] + 1
-            # print(deviation_range)
-            cache.set('data_id_and_devation_dict_' + version_item + '_' + dataset_id, data_id_and_devation_dict, 600)
-            cache.set('deviation_range_' + version_item + '_' + dataset_id, deviation_range, 600)
-            deviation_num = [v for k, v in deviation_range.items()]
-            data_list.append({'name': version_item, 'data': deviation_num})
+        result = handle_deviation_rate(data_id_list, selected_version_list, nid)
 
-        result = {'status': True, 'message': 'success', 'data_list': data_list}
     except Exception as e:
         result = {'status': False, 'message': 'false', 'data_list': []}
 
     return HttpResponse(json.dumps(result))
 
 
+def handle_deviation_rate(data_id_list, selected_version_list, nid):
+    """
+    处理显示偏差率的数据
+    :param data_id_list: 待处理的数据id列表
+    :param selected_version_list: 选择待显示版本
+    :param nid: 数据集id或者文件id
+    :return:
+    """
+    data_list = []
+    for version_item in selected_version_list:
+        deviation_range = {0.0: 0, 0.1: 0, 0.2: 0, 0.3: 0, 0.4: 0, 0.5: 0, 0.6: 0, 0.7: 0, 0.8: 0, 0.9: 0, 1.0: 0}
+        data_id_and_deviation = {}
+        data_id_and_devation_dict = {}
+        version_id = models.Version.objects.values('id').get(version=version_item)['id']
+        try:  # 批量查找
+            dataset_id_list_obj = models.VersionToThcikness.objects.raw(
+                "select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+                    data_id_list, version_id))
+            for data_item in dataset_id_list_obj:
+                data_id = data_item.data_id_id
+                deviation = data_item.deviation
+                data_id_and_deviation[data_id] = deviation
+        except:
+            pass
+        data_id_and_devation_dict[version_item] = data_id_and_deviation
+        for k_data_id, v_deviation_item in data_id_and_devation_dict[version_item].items():
+            judge_range = deviation_range.get(v_deviation_item)
+            if judge_range or judge_range == 0:
+                deviation_range[v_deviation_item] = deviation_range[v_deviation_item] + 1
+            else:
+                deviation_range[1.0] = deviation_range[1.0] + 1
+        # print(deviation_range)
+        cache.set('data_id_and_devation_dict_' + version_item + '_' + nid, data_id_and_devation_dict, 600)
+        cache.set('deviation_range_' + version_item + '_' + nid, deviation_range, 600)
+        deviation_num = [v for k, v in deviation_range.items()]
+        data_list.append({'name': version_item, 'data': deviation_num})
+
+    result = {'status': True, 'message': 'success', 'data_list': data_list}
+    return result
+
+
 @csrf_exempt
-def column_click_event_ajax(request, dataset_id):
+def column_click_event_ajax(request, nid):
     """
     柱状图点击事件
     :param request:
-    :param dataset_id: 数据集id
+    :param nid: 数据集id或者文件id
     :return:
     """
     selected_data_id = []
     version = request.POST.get('version')
     deviation = request.POST.get('deviation')
-    data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version + '_' + dataset_id)
-    deviation_range = cache.get('deviation_range_' + version + '_' + dataset_id)
+    data_id_and_devation_dict = cache.get('data_id_and_devation_dict_' + version + '_' + nid)
+    deviation_range = cache.get('deviation_range_' + version + '_' + nid)
     if data_id_and_devation_dict and deviation_range:  # 如果有缓存
         selected_deviation = deviation.split('-')[0]
         for k, v in data_id_and_devation_dict[version].items():
@@ -860,7 +893,8 @@ def column_click_event_ajax(request, dataset_id):
                     run_alg_thickness = run_alg_thickness_obj[0]['run_alg_thickness']
                 else:
                     run_alg_thickness = None
-                data_list.append({'data_id': data_id, 'version': version, 'run_alg_thickness': run_alg_thickness, 'true_thickness': true_thickness})
+                data_list.append({'data_id': data_id, 'version': version, 'run_alg_thickness': run_alg_thickness,
+                                  'true_thickness': true_thickness})
 
             except:
                 pass
@@ -906,10 +940,10 @@ class AlgAPI(View):
     def dispatch(self, request, *args, **kwargs):
         return super(AlgAPI, self).dispatch(request, *args, **kwargs)
 
-    def get(self, request, *args, **kwargs):
-        print(request.GET)
-        response = {'status': True, 'data': ['V-2.0', 'V-3.0']}
-        return JsonResponse(response)
+    # def get(self, request, *args, **kwargs):
+    #     print(request.GET)
+    #     response = {'status': True, 'data': ['V-2.0', 'V-3.0']}
+    #     return JsonResponse(response)
 
     @method_decorator(auth.alg_api_auth)
     def post(self, request, *args, **kwargs):
@@ -922,7 +956,6 @@ class AlgAPI(View):
         """
         alg_info = json.loads(request.body.decode('utf-8'))
         print(alg_info)
-
 
         result = {'status': True, 'message': None}
 
@@ -1052,8 +1085,6 @@ except Exception as e:
 def test(request):
     t1 = time.time()
 
-
     t2 = time.time()
     print(t2 - t1)
     return render(request, 'test.html')
-

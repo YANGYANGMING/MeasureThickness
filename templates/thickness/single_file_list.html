@@ -24,7 +24,9 @@
                 <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="RunAlg()">跑算法</button>
                 <label id="run-alg-msg" style="color: red;"></label>
 
-                <label for="true-thickness" style="margin-left: 200px;">手测厚度值：</label>
+                <a href="/thickness/deviation-rate/{{ file_id }}/{{ data_type }}/"><button style="margin-left: 20px" lay-filter="submit" class="layui-btn">查看当前文件偏差率</button></a>
+
+                <label for="true-thickness" style="margin-left: 100px;">手测厚度值：</label>
                 <div class="layui-input-inline" style="width: 100px;">
                     <input type="text" id="true-thickness" class="layui-input" placeholder="厚度值">
                 </div>
