@@ -95,7 +95,6 @@
             $('#progress-bar').css('display', 'block'); //显示进度条
             $('#file-count').css('display', 'block').html('本次上传 ' + res.success_count + ' 条数据！&nbsp;&nbsp;&nbsp;失败文件列表：' + res.file_fail_list);
             element.progress('demo', res.percent+'%');
-            console.log(res.done_status);
             if(res.done_status === true){
                 //回调清零
                 $.ajax({

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, HttpResponse
+from django.shortcuts import render, HttpResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -383,7 +383,7 @@ def single_dataset_list(request, dataset_id):
 
 def true_data_id_list(id_list):
     """
-    查找所有的存在的数据id，防止删除了文件或者部分数据，已存储的数据id不对
+    查找所有的存在的数据id，防止删除了文件或者部分数据，已存储的数据集中的数据列表中的id不对
     :param id_list: 要查询的数据id列表
     :return:
     """
@@ -461,7 +461,7 @@ def handle_alg_process(data_id_list, selected_version):
                          'version_id': version_id, 'deviation': deviation}
             models.VersionToThcikness.objects.create(**temp_dict)
             # print('create')
-        except Exception as e:
+        except:
             pass
 
 
@@ -641,16 +641,20 @@ class UploadFileView(View):
         return HttpResponse(json.dumps(result))
 
 
-def callback_zero():
+def callback_zero(request):
     """
     上传文件的回调清零
     :return:
     """
-    global file_count
-    file_count = 0
-    readfiles.success_count = 0
-    file_type.file_fail_list = []
-    result = {'status': True, 'message': 'success'}
+    try:
+        global file_count
+        file_count = 0
+        readfiles.success_count = 0
+        file_type.file_fail_list = []
+        result = {'status': True, 'message': 'success'}
+    except Exception as e:
+        print(e)
+        result = {'status': False, 'message': 'false'}
     return HttpResponse(json.dumps(result))
 
 
