@@ -13,7 +13,15 @@
             <fieldset class="layui-elem-field">
             <legend>数据集筛选条件列表</legend>
             <div class="layui-field-box">
-                <a href="/thickness/deviation-rate/{{ dataset_id }}/{{ data_type }}/"><button style="margin-left: 0" lay-filter="submit" class="layui-btn">查看当前数据集偏差率</button></a>
+                <div class="layui-input-inline" style="width: 150px;">
+                    <select name="version" xm-select="version" xm-select-radio>
+                        {% for i in version_obj %}
+                            <option value="{{ i.version }}">{{ i.version }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button style="margin-left: 10px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择版本</button>
+                <a href="/thickness/deviation-rate/{{ dataset_id }}/{{ data_type }}/"><button style="margin-left: 30px;" lay-filter="submit" class="layui-btn">查看当前数据集偏差率</button></a>
                 <label for="true-thickness" style="margin-left: 100px;">手测厚度值：</label>
                 <div class="layui-input-inline" style="width: 100px;">
                     <input type="text" id="true-thickness" class="layui-input" placeholder="厚度值">
@@ -44,11 +52,14 @@
     <input type="text" style="display: none;" id="nid" value="{{ dataset_id }}">
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
 
-        <script>
+    <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
+    <script>
+        var formSelects = layui.formSelects;
 
         $(function () {
             loadData(); //加载数据
             getPage();  //获取分页信息
+            ShowOriginData();
          });
 
         var curr_page = 1;
@@ -132,6 +143,29 @@
                 })
             }
 
+            //刷新页面显示当前的版本
+            function ShowOriginData() {
+                var selected_version = [];
+                selected_version.push('{{ selected_version }}');
+                formSelects.value('version', selected_version);
+            }
+
+            //选择版本并显示已选版本的数据信息
+            function SelectVersion() {
+                var version = formSelects.value('version', 'valStr');
+                $.ajax({
+                    url: '/thickness/select-version-ajax/',
+                    type: 'POST',
+                    data: {'version': version},
+                    dataType: 'JSON',
+                    success: function (arg) {
+                        if (arg.status){
+                            window.location.reload();
+                        }
+                    }
+                })
+            }
+
             //清除提示信息
             function ClearMSG(id) {
                 setTimeout(function () {
@@ -141,7 +175,7 @@
             }
 
 
-        </script>
+    </script>
 
 {% endblock %}
 

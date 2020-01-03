@@ -10,6 +10,7 @@
         </fieldset>
         <fieldset class="layui-elem-field">
         <legend>数据集筛选条件列表</legend>
+        <div class="layui-field-box">
             <div class="layui-input-inline" style="width: 150px; margin-left: 20px;">
                 <select name="version" xm-select="version" xm-select-radio>
                     {% for i in version_obj %}
@@ -17,8 +18,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择</button>
-            <div class="layui-field-box">
+            <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择版本</button>
             <table class="layui-table layui-form">
                 <thead>
                     <tr>
@@ -45,7 +45,6 @@
     <script>
 
         var formSelects = layui.formSelects;
-
 
         $(function () {
             ShowOriginData();
@@ -181,6 +180,7 @@
             })
         }
 
+        //刷新页面显示当前的版本
          function ShowOriginData() {
             var selected_version = [];
             selected_version.push('{{ selected_version }}');

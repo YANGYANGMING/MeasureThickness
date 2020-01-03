@@ -107,7 +107,7 @@ def tag_manage_save_ajax(request):
 
 def restart_run_alg(file_id, true_thickness):
     """
-    修改手测厚度值后，使用最新版本算法来重跑算法
+    修改整个文件的手测厚度值后，每个版本算法来重跑算法
     :param file_id: 文件ID
     :param true_thickness: 手测厚度值
     :return:
@@ -116,10 +116,11 @@ def restart_run_alg(file_id, true_thickness):
     # 如果true_thickness更改，需要重跑算法
     if prev_true_thickness != float(true_thickness):
         models.DataFile.objects.filter(file_name_id=file_id).update(true_thickness=true_thickness)
-        version = models.Version.objects.values('version').last()['version']
+        version_obj = models.Version.objects.values('version').all()
+        version_list = [version['version'] for version in version_obj]
         data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
         data_id_list = [item['nid'] for item in data_id_list]   # int
-        handle_alg_process(data_id_list, version)
+        handle_alg_process(data_id_list, version_list)
 
 
 @csrf_exempt
@@ -275,12 +276,13 @@ def single_file_run_alg_ajax(request):
         file_id = request.POST.get('file_id')
         selected_version = request.POST.get('version')
         request.session['selected_version'] = selected_version
+        version_list = [selected_version]
         data_id_dict = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
         data_id_list = []
         for item in data_id_dict:
             data_id_list.append(item['nid'])
         t1 = time.time()
-        handle_alg_process(data_id_list, selected_version)
+        handle_alg_process(data_id_list, version_list)
         t2 = time.time()
         print('文件算法时间：', t2 - t1)
         result = {'status': True, 'message': '算法执行成功'}
@@ -345,6 +347,7 @@ def single_dataset_list(request, dataset_id):
     :return:
     """
     data_type = "data_set"
+    version_obj = models.Version.objects.values('version').order_by('-id')
     data_time_condition_obj = \
     models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
@@ -409,9 +412,10 @@ def dataset_run_alg_ajax(request):
         tt1 = time.time()
         dataset_id = request.POST.get('dataset_id')
         selected_version = request.POST.get('selected_version')
+        version_list = [selected_version]
         data_set_id_obj = models.DataSetCondition.objects.filter(id=dataset_id).values('data_set_id')
         data_id_list = eval(data_set_id_obj[0]['data_set_id'])
-        handle_alg_process(data_id_list, selected_version)
+        handle_alg_process(data_id_list, version_list)
         tt2 = time.time()
         print('数据集跑算法时间：', tt2 - tt1)
         result = {'status': True, 'message': '算法执行成功'}
@@ -420,50 +424,96 @@ def dataset_run_alg_ajax(request):
     return HttpResponse(json.dumps(result))
 
 
-def handle_alg_process(data_id_list, selected_version):
+def handle_alg_process(data_id_list, version_list):
     """
     处理算法过程
     :param data_id_list: 要跑算法的数据id列表
-    :param selected_version: 选择的版本名称
+    :param version_list: 选择的版本列表
     :return:
     """
-    version_id = models.Version.objects.values('id').get(version=selected_version)['id']
     data_id_list = list_to_str_tuple(data_id_list)
-    thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
-    update_data_id_set = set()
-    data_id_list_obj = models.VersionToThcikness.objects.raw(
-        "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
-        data_id_list, version_id))
-    # 用于update
-    for data_item in data_id_list_obj:
-        try:
-            data_id = data_item.data_id_id
-            run_alg_thickness = data_item.run_alg_thickness
-            update_data_id_set.add(data_id)
-            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-            if not true_thickness:
-                true_thickness = 0
-            deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
-            temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
-            models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
-            # print('update')
-        except Exception as e:
-            pass
-    # 用于create
-    create_data_id_set = set(eval(data_id_list)) - update_data_id_set
-    for data_id in create_data_id_set:
-        try:
-            true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
-            if not true_thickness:
-                true_thickness = 0
-            run_alg_thickness = thickness_dict[data_id]
-            deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
-            temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
-                         'version_id': version_id, 'deviation': deviation}
-            models.VersionToThcikness.objects.create(**temp_dict)
-            # print('create')
-        except:
-            pass
+    for version_item in version_list:
+        print('version_item', version_item)
+        update_data_id_set = set()
+        version_id = models.Version.objects.values('id').get(version=version_item)['id']
+        data_id_list_obj = models.VersionToThcikness.objects.raw(
+            "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+            data_id_list, version_id))
+        print('data_id_list_obj', data_id_list_obj)
+        # 用于update
+        for data_item in data_id_list_obj:
+            try:
+                data_id = data_item.data_id_id
+                print('data_id', data_id)
+                run_alg_thickness = data_item.run_alg_thickness  # 如果没有跑算法，直接except跳过，结束后会对其进行create操作
+                print('run_alg_thickness', run_alg_thickness)
+                update_data_id_set.add(data_id)
+                true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+                if not true_thickness:
+                    true_thickness = 0
+                deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+                temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
+                models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
+                print('update', version_item, data_id)
+            except Exception as e:
+                pass
+        # 用于create
+        create_data_id_set = set(eval(data_id_list)) - update_data_id_set
+        print('create_data_id_set', create_data_id_set)
+        if create_data_id_set:
+            thickness_dict = handledataset.handle_data_and_run_alg(list(create_data_id_set), version_item)  # 把没有跑算法的数据去跑算法
+            print('thickness_dict', thickness_dict)
+            for data_id in create_data_id_set:
+                try:
+                    true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+                    if not true_thickness:
+                        true_thickness = 0
+                    run_alg_thickness = thickness_dict[data_id]
+                    deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+                    temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
+                                 'version_id': version_id, 'deviation': deviation}
+                    models.VersionToThcikness.objects.create(**temp_dict)
+                    print('create', version_item, data_id)
+                except:
+                    pass
+
+        # version_id = models.Version.objects.values('id').get(version=selected_version)['id']
+        # data_id_list = list_to_str_tuple(data_id_list)
+        # thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
+        # update_data_id_set = set()
+        # data_id_list_obj = models.VersionToThcikness.objects.raw(
+        #     "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+        #         data_id_list, version_id))
+        # # 用于update
+        # for data_item in data_id_list_obj:
+        #     try:
+        #         data_id = data_item.data_id_id
+        #         run_alg_thickness = data_item.run_alg_thickness
+        #         update_data_id_set.add(data_id)
+        #         true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+        #         if not true_thickness:
+        #             true_thickness = 0
+        #         deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+        #         temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
+        #         models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
+        #         # print('update')
+        #     except Exception as e:
+        #         pass
+        # # 用于create
+        # create_data_id_set = set(eval(data_id_list)) - update_data_id_set
+        # for data_id in create_data_id_set:
+        #     try:
+        #         true_thickness = models.DataFile.objects.values('true_thickness').get(nid=data_id)['true_thickness']
+        #         if not true_thickness:
+        #             true_thickness = 0
+        #         run_alg_thickness = thickness_dict[data_id]
+        #         deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))  # 保留一位小数
+        #         temp_dict = {'data_id_id': data_id, 'run_alg_thickness': run_alg_thickness,
+        #                      'version_id': version_id, 'deviation': deviation}
+        #         models.VersionToThcikness.objects.create(**temp_dict)
+        #         # print('create')
+        #     except:
+        #         pass
 
 
 @csrf_exempt
@@ -501,9 +551,10 @@ def batch_save_true_thickness_ajax(request):
             if prev_true_thickness != true_thickness:
                 print('重跑')
                 models.DataFile.objects.filter(nid=nid).update(true_thickness=true_thickness)
-                version = models.Version.objects.values('version').last()['version']
+                version_obj = models.Version.objects.values('version').all()
+                version_list = [version['version'] for version in version_obj]
                 data_id_list = [int(nid), int(nid)]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
-                handle_alg_process(data_id_list, version)
+                handle_alg_process(data_id_list, version_list)
 
         result = {'status': True, 'message': '批量设置成功'}
     except Exception as e:
@@ -928,9 +979,10 @@ def submit_true_thickness(request):
         if prev_true_thickness != true_thickness:
             print('重跑')
             models.DataFile.objects.filter(nid=data_id).update(true_thickness=true_thickness)
-            version = models.Version.objects.values('version').last()['version']
+            version_obj = models.Version.objects.values('version').all()
+            version_list = [version['version'] for version in version_obj]
             data_id_list = [int(data_id), int(data_id)]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
-            handle_alg_process(data_id_list, version)
+            handle_alg_process(data_id_list, version_list)
 
         result = {'status': True, 'message': '设置成功'}
     except Exception as e:
