@@ -8,14 +8,23 @@
         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
           <legend>多文件上传列表</legend>
         </fieldset>
-        <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
-        <label id="generate-dataset-by-file-msg" style="color: red;"></label>
 
+{#        <div class="layui-input-inline" style="width: 150px;">#}
+{#            <select style="margin-left: 20px;" name="version" xm-select="version" xm-select-radio>#}
+{#                {% for i in version_obj %}#}
+{#                    <option value="{{ i.version }}">{{ i.version }}</option>#}
+{#                {% endfor %}#}
+{#            </select>#}
+{#        </div>#}
+{#        <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择版本</button>#}
 
-        <div style="margin-left: 100px; width: 300px; display: inline-block;">
+        <div style="margin-left: 0; width: 300px; display: inline-block;">
             <input id="file-tag" class="layui-input" type="search" placeholder="文件描述">
         </div>
         <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="SearchTag()">搜索</button>
+
+        <button style="margin-left: 100px;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
+        <label id="generate-dataset-by-file-msg" style="color: red;"></label>
 
         <button style="float: right;" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveFile()">删除选中文件</button>
         <label id="remove-file-msg" style="color: red; float: right; margin-top: 10px"></label>
@@ -45,6 +54,7 @@
     <input type="text" style="display: none;" id="total-count" value="{{ count }}">
     <input type="text" style="display: none;" id="version" value="{{ version }}">
 
+    <script type="text/javascript" src="/static/plugins/formselects/dist/formSelects-v4.min.js"></script>
     <script>
 
         $(function () {

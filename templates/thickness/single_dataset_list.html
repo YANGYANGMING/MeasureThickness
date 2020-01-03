@@ -8,16 +8,22 @@
         <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
           <legend>数据集详细信息</legend>
         </fieldset>
-        <a href="/thickness/deviation-rate/{{ dataset_id }}/{{ data_type }}/"><button style="margin-left: 20px" lay-filter="submit" class="layui-btn">查看当前数据集偏差率</button></a>
-        <div id="container" style="width: 1600px; margin-left: 15px">
-        </div>
+
         <div style="padding: 15px;" class="layui-anim layui-anim-upbit">
             <fieldset class="layui-elem-field">
             <legend>数据集筛选条件列表</legend>
             <div class="layui-field-box">
-                <table class="layui-table layui-form">
+                <a href="/thickness/deviation-rate/{{ dataset_id }}/{{ data_type }}/"><button style="margin-left: 0" lay-filter="submit" class="layui-btn">查看当前数据集偏差率</button></a>
+                <label for="true-thickness" style="margin-left: 100px;">手测厚度值：</label>
+                <div class="layui-input-inline" style="width: 100px;">
+                    <input type="text" id="true-thickness" class="layui-input" placeholder="厚度值">
+                </div>
+                <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="BatchSaveTrueThickness()">保存手测厚度</button>
+                <label id="batch-save-msg" style="color: red;"></label>
+                <table class="layui-table">
                     <thead>
                         <tr>
+                            <th style="width: 30px">选项</th>
                             <th>数据ID</th>
                             <th>版本号</th>
                             <th>跑算法得出厚度值(mm)</th>
@@ -67,6 +73,7 @@
                         var run_alg_thickness = v.run_alg_thickness;
                         var true_thickness = v.true_thickness;
                         html += "<tr>";
+                        html += "<td><input class=\"layui-form-checkbox\" lay-skin=\"primary\" type=\"checkbox\"></td>";
                         html += "<td>" + data_id + "</td>";
                         html += "<td>" + '{{ selected_version }}' + "</td>";
                         html += "<td>" + run_alg_thickness + "</td>";
@@ -100,6 +107,38 @@
                           });
                      });
                 }
+
+            //手测厚度批量赋值
+            function BatchSaveTrueThickness() {
+                var selected_data_id_list = [];
+                var true_thickness = $('#true-thickness').val();
+                $('#tb-list').find(':checkbox').each(function () {
+                    if ($(this).prop('checked')){
+                        var nid = $(this).parent().parent().children().eq(1).html();
+                        selected_data_id_list.push(nid)
+                    }
+                });
+                $.ajax({
+                    url: '/thickness/batch-save-true-thickness-ajax/',
+                    type: 'POST',
+                    data:  {'selected_data_id_list': JSON.stringify(selected_data_id_list),
+                            'true_thickness': true_thickness,
+                    },
+                    dataType: 'JSON',
+                    success: function (arg) {
+                        $('#batch-save-msg').text(arg.message);
+                        ClearMSG('batch-save-msg');
+                    }
+                })
+            }
+
+            //清除提示信息
+            function ClearMSG(id) {
+                setTimeout(function () {
+                    $('#'+id).text('');
+                    window.location.reload();
+                    }, 800);
+            }
 
 
         </script>

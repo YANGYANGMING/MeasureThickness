@@ -36,6 +36,7 @@ def tag_manage(request):
     """
     file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
     count = file_tag_obj.count()
+    # version_obj = models.Version.objects.values('version').order_by('-id')
     try:
         version = models.Version.objects.values('version').last()['version']
         for item in file_tag_obj:
@@ -117,7 +118,7 @@ def restart_run_alg(file_id, true_thickness):
         models.DataFile.objects.filter(file_name_id=file_id).update(true_thickness=true_thickness)
         version = models.Version.objects.values('version').last()['version']
         data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=file_id)
-        data_id_list = [item['nid'] for item in data_id_list]
+        data_id_list = [item['nid'] for item in data_id_list]   # int
         handle_alg_process(data_id_list, version)
 
 
@@ -430,11 +431,11 @@ def handle_alg_process(data_id_list, selected_version):
     data_id_list = list_to_str_tuple(data_id_list)
     thickness_dict = handledataset.handle_data_and_run_alg(data_id_list, selected_version)
     update_data_id_set = set()
-    dataset_id_list_obj = models.VersionToThcikness.objects.raw(
+    data_id_list_obj = models.VersionToThcikness.objects.raw(
         "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
         data_id_list, version_id))
     # 用于update
-    for data_item in dataset_id_list_obj:
+    for data_item in data_id_list_obj:
         try:
             data_id = data_item.data_id_id
             run_alg_thickness = data_item.run_alg_thickness
@@ -501,7 +502,7 @@ def batch_save_true_thickness_ajax(request):
                 print('重跑')
                 models.DataFile.objects.filter(nid=nid).update(true_thickness=true_thickness)
                 version = models.Version.objects.values('version').last()['version']
-                data_id_list = [nid, nid]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
+                data_id_list = [int(nid), int(nid)]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
                 handle_alg_process(data_id_list, version)
 
         result = {'status': True, 'message': '批量设置成功'}
@@ -928,7 +929,7 @@ def submit_true_thickness(request):
             print('重跑')
             models.DataFile.objects.filter(nid=data_id).update(true_thickness=true_thickness)
             version = models.Version.objects.values('version').last()['version']
-            data_id_list = [data_id, data_id]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
+            data_id_list = [int(data_id), int(data_id)]  # 后面用到的数据库查询语句where XX in (1,2)，不能只有一个条件
             handle_alg_process(data_id_list, version)
 
         result = {'status': True, 'message': '设置成功'}
