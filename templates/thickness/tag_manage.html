@@ -9,22 +9,13 @@
           <legend>多文件上传列表</legend>
         </fieldset>
 
-{#        <div class="layui-input-inline" style="width: 150px;">#}
-{#            <select style="margin-left: 20px;" name="version" xm-select="version" xm-select-radio>#}
-{#                {% for i in version_obj %}#}
-{#                    <option value="{{ i.version }}">{{ i.version }}</option>#}
-{#                {% endfor %}#}
-{#            </select>#}
-{#        </div>#}
-{#        <button style="margin-left: 20px" lay-filter="submit" class="layui-btn" onclick="SelectVersion()">选择版本</button>#}
+        <button style="margin-left: 0;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
+        <p style="display: inline-block; width: 100px;"><label id="generate-dataset-by-file-msg" style="color: red;"></label></p>
 
-        <div style="margin-left: 0; width: 300px; display: inline-block;">
+        <div style="margin-left: 250px; width: 300px; display: inline-block;">
             <input id="file-tag" class="layui-input" type="search" placeholder="文件描述">
         </div>
         <button style="margin-left: 20px;" lay-filter="submit" class="layui-btn" onclick="SearchTag()">搜索</button>
-
-        <button style="margin-left: 100px;" lay-filter="submit" class="layui-btn" onclick="GenerateDataSetByFile()">选中文件生成数据集</button>
-        <label id="generate-dataset-by-file-msg" style="color: red;"></label>
 
         <button style="float: right;" lay-filter="submit" class="layui-btn layui-btn-danger" onclick="RemoveFile()">删除选中文件</button>
         <label id="remove-file-msg" style="color: red; float: right; margin-top: 10px"></label>

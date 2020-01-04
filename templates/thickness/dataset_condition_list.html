@@ -25,9 +25,10 @@
                         <th style="width: 60px">编辑标签</th>
                         <th style="width: 20px">ID</th>
                         <th style="width: 600px">数据集筛选条件</th>
-                        <th style="width: 400px">数据集标签</th>
-                        <th style="width: 60px">详细数据</th>
-                        <th style="width: 280px">操作</th>
+                        <th style="width: 200px">数据集所在文件</th>
+                        <th style="width: 300px">数据集标签</th>
+                        <th style="width: 70px">详细数据</th>
+                        <th style="width: 320px">操作</th>
                     </tr>
                 </thead>
 
@@ -79,6 +80,7 @@
                         html += "<td><button type=\"button\" class=\"layui-btn\" onclick=\"bindEditMode(this)\">编辑</button></td>";
                         html += "<td>" + nid + "</td>";
                         html += "<td>" + time_and_id + "</td>";
+                        html += "<td>" + '1.lsa' + "</td>";
                         html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"dataset-tag\">" + dataset_tag + "</td>";
                         html += "<td><a href=\"/thickness/single-dataset-list" + "/" + nid + "\">详细数据</a></td>";
                         html += "<td>";

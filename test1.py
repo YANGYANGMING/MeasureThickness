@@ -243,5 +243,5 @@ li = "(3, 4, 11, 12, 13)"
 #
 # file_obj = data_obj.values('file_name_id', 'file_name__file_name').first()
 # print(file_obj)
-
-
+# version_obj = models.Version.objects.values('version').all().order_by('-id')[:1]
+# print(version_obj)
