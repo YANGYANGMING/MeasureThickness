@@ -9,6 +9,7 @@ urlpatterns = [
     re_path(r'^change-pwd/$', home.ChangepwdView.as_view()),
 
     re_path(r'^upload-file/$', DataSet.UploadFileView.as_view()),
+    re_path(r'^callback-zero-ajax/$', DataSet.callback_zero),
 
     re_path(r'^tag-manage/$', DataSet.tag_manage),
     re_path(r'^tag-manage-save-ajax/$', DataSet.tag_manage_save_ajax),
@@ -28,8 +29,6 @@ urlpatterns = [
     re_path(r'^save-dataset-tag-ajax/$', DataSet.save_dataset_tag_ajax),
 
     re_path(r'^generate-dataset-ajax/$', DataSet.generate_dataset_ajax),
-
-    re_path(r'^callback-zero-ajax/$', DataSet.callback_zero),
 
     re_path(r'^dataset-run-alg-ajax/$', DataSet.dataset_run_alg_ajax),
     re_path(r'^remove-dataset-ajax/$', DataSet.remove_dataset_ajax),
