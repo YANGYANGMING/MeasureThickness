@@ -36,9 +36,8 @@ def tag_manage(request):
     """
     file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
     count = file_tag_obj.count()
-    # version_obj = models.Version.objects.values('version').order_by('-id')
     try:
-        version = models.Version.objects.values('version').last()['version']
+        version = select_version()
         for item in file_tag_obj:
             file_id = item['id']
             true_thickness = get_most_true_thickness(file_id)
@@ -225,7 +224,7 @@ def single_file_data(request, file_id, version):
     data_type = "file"
     selected_version = request.session.get('selected_version')
     if not selected_version:  # 如果没有选择版本，默认使用最新版本
-        selected_version = models.Version.objects.values('version').last()['version']
+        selected_version = select_version()
     version_obj = models.Version.objects.values('version').order_by('-id')
     data_obj = models.DataFile.objects.filter(file_name_id=file_id).order_by('nid')
     count = data_obj.count()
@@ -307,7 +306,7 @@ def dataset_condition_list(request):
         # 从session中获取selected_version
         selected_version = request.session.get('selected_version')
         if not selected_version:
-            selected_version = models.Version.objects.values('version').last()['version']
+            selected_version = select_version()
     except:
         pass
 
@@ -357,7 +356,7 @@ def single_dataset_list(request, dataset_id):
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
     if not selected_version:
-        selected_version = models.Version.objects.values('version').last()['version']
+        selected_version = select_version()
 
     if request.method == "GET":
         return render(request, 'thickness/single_dataset_list.html', locals())
@@ -479,7 +478,7 @@ def update_devation(data_id_list_obj, version_item, version_id, update_data_id_s
             deviation = export_result(abs(Decimal(str(true_thickness)) - Decimal(str(run_alg_thickness))))
             temp_dict = {'run_alg_thickness': run_alg_thickness, 'deviation': deviation}
             models.VersionToThcikness.objects.filter(data_id=data_id, version=version_id).update(**temp_dict)
-            # print('update', version_item, data_id)
+            print('update', version_item, data_id)
         except:
             pass
 
@@ -1015,6 +1014,38 @@ class AlgAPI(View):
         return JsonResponse(result)
 
 
+def pager(request, data_obj):
+    """
+    分页
+    :param request:
+    :param data_obj: 要分页的数据对象
+    :return:
+    """
+    result = {'status': False, 'data_list': []}
+    limit = int(request.POST.get('limit'))  # 每页显示的条数
+    curr_page = int(request.POST.get('curr_page'))
+    # print(limit)
+    # print(curr_page)
+    if curr_page == 1:
+        start_range = curr_page - 1
+        end_range = curr_page * limit
+    else:
+        start_range = (curr_page - 1) * limit
+        end_range = curr_page * limit
+    result['data_list'] = data_obj[start_range: end_range]
+    result['status'] = True
+    return result
+
+
+def page_404(request):
+    """
+    404页面
+    :param request:
+    :return:
+    """
+    return render(request, 'thickness/404.html')
+
+
 def clear_repeat_imgs():
     """
     清理重复图片
@@ -1077,8 +1108,8 @@ def get_most_true_thickness(file_id):
 def showmax(sample_list):
     """
     找出出现次数最多的手测厚度值
-    :param sample_list: 
-    :return: 
+    :param sample_list:
+    :return:
     """
     index1 = 0  # 记录出现次数最多的元素下标
     max_num = 0  # 记录最大的元素出现次数
@@ -1093,36 +1124,17 @@ def showmax(sample_list):
     return sample_list[index1]
 
 
-def pager(request, data_obj):
+def select_version():
     """
-    分页
-    :param request:
-    :param data_obj: 要分页的数据对象
+    选择版本号，并判断版本号是否存在
     :return:
     """
-    result = {'status': False, 'data_list': []}
-    limit = int(request.POST.get('limit'))  # 每页显示的条数
-    curr_page = int(request.POST.get('curr_page'))
-    # print(limit)
-    # print(curr_page)
-    if curr_page == 1:
-        start_range = curr_page - 1
-        end_range = curr_page * limit
+    selected_version_obj = models.Version.objects.values('version').last()
+    if selected_version_obj:
+        selected_version = selected_version_obj['version']
     else:
-        start_range = (curr_page - 1) * limit
-        end_range = curr_page * limit
-    result['data_list'] = data_obj[start_range: end_range]
-    result['status'] = True
-    return result
-
-
-def page_404(request):
-    """
-    404页面
-    :param request:
-    :return:
-    """
-    return render(request, 'thickness/404.html')
+        selected_version = 'None'
+    return selected_version
 
 
 try:
