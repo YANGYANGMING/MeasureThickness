@@ -26,6 +26,7 @@ class DataTag(models.Model):
     file_name = models.TextField(blank=True, null=True)
     tag_content = models.TextField(blank=True, null=True, default={'file_explain': '', 'img_path': '/static/default-imgs/default.png'})
     md5_val = models.TextField(blank=True, null=True)
+    create_time = models.DateTimeField(auto_now_add=True)
 
 
 class VersionToThcikness(models.Model):

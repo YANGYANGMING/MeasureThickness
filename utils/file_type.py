@@ -1,6 +1,6 @@
 from thickness import models
 from utils.handel_data import HandleDataSet
-import struct, ast, json, array, time, copy
+import struct, ast, json, array, time
 
 handledataset = HandleDataSet()
 file_fail_list = []
@@ -11,16 +11,25 @@ class FileType(object):
         self.file_obj = file_obj
         self.storage = storage
 
+    def _md5_verification(self):
+        """
+        md5验证
+        :return:
+        """
+        # MD5校验
+        self.md5_val = handledataset._MD5(self.file_obj.read())
+        self.is_exist = models.DataTag.objects.filter(md5_val=self.md5_val).exists()
+        self.file_obj.seek(0)  # 读取文件进行MD5后，光标移动到最后，用f.seek(0)移动光标到文件开头，以便重新读取文件
+        return self.is_exist
+
     def _lsa(self):
         dic = {}
         data_list = []
-        md5_file_obj = copy.deepcopy(self.file_obj)
-        # MD5校验
-        md5_val = handledataset._MD5(md5_file_obj.read())
-        is_exist = models.DataTag.objects.filter(md5_val=md5_val)
 
-        if not is_exist.exists():  #如果文件不存在
-            models.DataTag.objects.create(file_name=self.file_obj.name, md5_val=md5_val)
+        is_exist = self._md5_verification()
+
+        if not is_exist:  #如果文件不存在
+            models.DataTag.objects.create(file_name=self.file_obj.name, md5_val=self.md5_val)
             for i in self.file_obj.readlines():
                 temp = i.decode('utf-8').strip('\n').split(':')
                 if temp[0] == "Data":
@@ -33,7 +42,7 @@ class FileType(object):
             after_dict_data = struct.pack("<%sh" % data_len, *dic['Data'])
             del dic['Data']
             front_dict = str(dic)
-            file_name_id = models.DataTag.objects.values('id').filter(md5_val=md5_val)[0]['id']
+            file_name_id = models.DataTag.objects.values('id').filter(md5_val=self.md5_val)[0]['id']
             data_list.append(models.DataFile(message_head=front_dict, message_body_data=after_dict_data, file_name_id=file_name_id))
         else:
             print('文件已存在')
@@ -44,16 +53,11 @@ class FileType(object):
     def _lsb(self):
         dic = {}
         data_list = []
-        # MD5校验
-        t1 = time.time()
-        md5_val = handledataset._MD5(self.file_obj.read())
-        is_exist = models.DataTag.objects.filter(md5_val=md5_val)
-        t2 = time.time()
-        print('md5校验:', t2 - t1)
-        self.file_obj.seek(0)  # 读取文件进行MD5后，光标移动到最后，用f.seek(0)移动光标到文件开头
 
-        if not is_exist.exists():  #如果文件不存在
-            models.DataTag.objects.create(file_name=self.file_obj.name, md5_val=md5_val)
+        is_exist = self._md5_verification()
+
+        if not is_exist:  #如果文件不存在
+            models.DataTag.objects.create(file_name=self.file_obj.name, md5_val=self.md5_val)
             all = self.file_obj.read().decode('UTF-8')
             temp = all.split('------------------------------------')
             front = temp[0].strip('\n').split('\n')  #['Range: 1X,2048', 'Material: 碳钢,3254.0,0.53', 'Temperature: 25', 'Frequency: 高频', 'Average: 5', 'Gate: ', 'Detector: 射频波,0']
@@ -101,7 +105,7 @@ class FileType(object):
                 after_dict_param['Gain'] = after_dict['Gain']
                 after_dict_param = str(after_dict_param)
 
-                file_name_id = models.DataTag.objects.values('id').filter(md5_val=md5_val)[0]['id']
+                file_name_id = models.DataTag.objects.values('id').filter(md5_val=self.md5_val)[0]['id']
                 data_list.append(models.DataFile(message_head=front_dict, message_body_data=after_dict_data, message_body_param=after_dict_param, file_name_id=file_name_id))
             end2 = time.time()
             print('time2====', end2 - start2)

@@ -1,5 +1,6 @@
 from django.shortcuts import render, HttpResponse
 from apscheduler.schedulers.background import BackgroundScheduler
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from MeasureThickness.settings import Base_img_path
@@ -24,6 +25,7 @@ handleimgs = HandleImgs()
 file_count = 0
 
 
+@login_required
 @csrf_exempt
 def tag_manage(request):
     """
@@ -31,7 +33,7 @@ def tag_manage(request):
     :param request:
     :return:
     """
-    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content').all().order_by('-id')
+    file_tag_obj = models.DataTag.objects.values('id', 'file_name', 'tag_content', 'create_time').all().order_by('-id')
     count = file_tag_obj.count()
     try:
         version = select_version()
@@ -39,6 +41,7 @@ def tag_manage(request):
             file_id = item['id']
             true_thickness = get_most_true_thickness(file_id)
             item['true_thickness'] = true_thickness
+            item['create_time'] = str(item['create_time']).split('.')[0]
             if item['tag_content']:
                 tag_content_dict = eval(item['tag_content'])
                 item['file_explain'] = tag_content_dict['file_explain']
@@ -51,7 +54,7 @@ def tag_manage(request):
     if request.method == "POST":
         # 分页
         result = pager(request, file_tag_obj)
-        result['data_list'] = list(result['data_list'])
+        result['data_list'] = result['data_list']
         return HttpResponse(json.dumps(result))
 
 
@@ -101,6 +104,7 @@ def tag_manage_save_ajax(request):
     return HttpResponse(json.dumps(result))
 
 
+@login_required
 def restart_run_alg(file_id, true_thickness):
     """
     修改整个文件的手测厚度值后，每个版本算法来重跑算法
@@ -188,12 +192,13 @@ def search_file_ajax(request):
         q = Q()
         q.connector = "OR"
         q.children.append(("tag_content__contains", search_value))
-        search_obj = list(models.DataTag.objects.filter(q).values('id', 'file_name', 'tag_content').order_by('-id'))
+        search_obj = list(models.DataTag.objects.filter(q).values('id', 'file_name', 'tag_content', 'create_time').order_by('-id'))
         for item in search_obj:
             file_id = item['id']
             true_thickness = models.DataFile.objects.values('true_thickness').filter(file_name_id=file_id)[0][
                 'true_thickness']
             item['true_thickness'] = true_thickness
+            item['create_time'] = str(item['create_time']).split('.')[0]
             if item['tag_content']:
                 tag_content_dict = eval(item['tag_content'])
                 item['file_explain'] = tag_content_dict['file_explain']
@@ -208,6 +213,7 @@ def search_file_ajax(request):
     return HttpResponse(json.dumps(result))
 
 
+@login_required
 @csrf_exempt
 def single_file_data(request, file_id, version):
     """
@@ -290,6 +296,7 @@ def single_file_run_alg_ajax(request):
     return HttpResponse(json.dumps(result))
 
 
+@login_required
 @csrf_exempt
 def dataset_condition_list(request):
     """
@@ -336,6 +343,7 @@ def save_dataset_tag_ajax(request):
     return HttpResponse(json.dumps(result))
 
 
+@login_required
 @csrf_exempt
 def single_dataset_list(request, dataset_id):
     """
@@ -635,6 +643,7 @@ def data_2048_chart(request, data_id, thickness):
 
 class UploadFileView(View):
     @method_decorator(csrf_exempt)  # CSRF Token相关装饰器在CBV只能加到dispatch方法上
+    @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         return super(UploadFileView, self).dispatch(request, *args, **kwargs)
 
@@ -708,6 +717,7 @@ def callback_zero(request):
 
 class GenerateDataSetView(View):
     @method_decorator(csrf_exempt)
+    @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         return super(GenerateDataSetView, self).dispatch(request, *args, **kwargs)
 

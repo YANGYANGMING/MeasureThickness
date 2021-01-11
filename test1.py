@@ -251,7 +251,6 @@ from thickness import models
 # b = base64.b64decode(a.decode('utf-8'))
 # print(json.loads(b))
 a = (53989, 53990, 53991, 53992, 53993, 53994, 53995, 53996, 53997, 53998, 53999, 54000, 54001, 54002, 54003, 54004, 54005, 54006, 54007, 54008, 54009, 54010, 54011, 54012, 54013, 54014, 54015, 54016, 54017, 54018, 54019, 54020, 54021, 54023, 54024, 54025, 54026, 54027, 54029, 54032, 54033, 54034, 54036, 54040, 54043, 54047, 54050, 54053, 54057, 54069, 54072, 54075, 54078, 54081, 54082, 54083, 54084, 54085, 54086, 54087, 54088, 54089, 54090, 54091, 54092, 54093, 54094, 54095, 54096, 54097)
-data_id_list_obj = models.DataFile.objects.filter(nid__in=a)
-for i in data_id_list_obj:
-    # print(i.nid)
-    print(i.create_time)
+
+create_time = models.DataTag.objects.values('create_time').first()['create_time']
+print(str(create_time).split('.')[0])

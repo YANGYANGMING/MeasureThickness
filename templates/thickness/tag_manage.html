@@ -31,6 +31,7 @@
                     <th style="width: 200px">文件名</th>
                     <th style="width: 150px">图片</th>
                     <th style="width: 80px">手测厚度</th>
+                    <th style="width: 150px">上传时间</th>
                     <th>文件描述</th>
                 </tr>
               </thead>
@@ -226,6 +227,7 @@
                 var nid = v.id;
                 var file_name = v.file_name;
                 var img_path = v.img_path;
+                var create_time = v.create_time;
                 var file_explain = v.file_explain;
                 var true_thickness = v.true_thickness;
                 var version = $('#version').val();  //<div class="layui-unselect layui-form-checkbox" lay-skin="primary"><i class="layui-icon layui-icon-ok"></i></div>
@@ -236,6 +238,7 @@
                 html += "<td><a href=\"/thickness/single-file-data" + "/" + nid + "/" + version +  "\" >" + file_name + "</a></td>";
                 html += "<td edit-enable=\"true\" edit-type=\"file\" id=\"show-img-" + nid + "\"><img src=\"" + img_path + "\" onclick=\"ShowBigImage(this)\"></td>";
                 html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"true-thickness\">" + true_thickness + "</td>";
+                html += "<td>" + create_time + "</td>";
                 html += "<td edit-enable=\"true\" edit-type=\"input\" id=\"file-explain\">" + file_explain + "</td>";
                 html += "</tr>";
             });

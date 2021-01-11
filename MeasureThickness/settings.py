@@ -26,7 +26,7 @@ SECRET_KEY = 'erlsx+y2q7e8g%2f0n0y0^3crinc%wl$4-l3s^zx7kukcp0$_n'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
