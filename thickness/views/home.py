@@ -5,15 +5,28 @@ from utils.myforms import ChangepwdForm
 
 
 class IndexView(View):
-    """首页"""
-    def get(self, request, *args, **kwargs):
 
+    def get(self, request, *args, **kwargs):
+        """
+        首页
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         return render(request, "index.html")
 
+
 class ChangepwdView(View):
-    """修改密码"""
+
     def get(self, request, *args, **kwargs):
-        """修改密码"""
+        """
+        修改密码
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         result = {'message': ''}
         form = ChangepwdForm()
         if not request.user.is_authenticated:
@@ -22,6 +35,13 @@ class ChangepwdView(View):
         return render(request, "thickness/change_pwd.html", locals())
 
     def post(self, request, *args, **kwargs):
+        """
+        提交验证新密码
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
         result = {'message': ''}
         form = ChangepwdForm(request.POST)
         if form.is_valid():

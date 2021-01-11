@@ -14,7 +14,7 @@ class WaveData(Structure):
 def calThickness(data, gain_db, version, pluse_num=2, nSize=2048, vel_mps=3240, freq_Hz=40e6):
 
     ETGminiX1_file = os.path.dirname(os.path.abspath(__file__)) + '/thicknessgauge_x86_64_%s.so' % (version)
-    # ETGminiX1_file = os.path.dirname(os.path.abspath(__file__)) + '/thicknessgauge_armv7l.so'
+    # ETGminiX1_file = os.path.dirname(os.path.abspath(__file__)) + '/thicknessgauge_armv7l_%s.so' % (version)
     ETGminiX1 = CDLL(ETGminiX1_file)
 
     thick_mm = -19.0

@@ -22,9 +22,6 @@ scheduler = BackgroundScheduler()
 handledataset = HandleDataSet()
 handleimgs = HandleImgs()
 file_count = 0
-ENCRYPT_LIST = [
-    # {'encrypt': encrypt, 'time': timestamp
-]
 
 
 @csrf_exempt
@@ -282,13 +279,14 @@ def single_file_run_alg_ajax(request):
             data_id_list.append(item['nid'])
         t1 = time.time()
         # 跑算法
+        print(data_id_list)
         handle_alg_process(data_id_list, version_list, only_run_alg=True)
         t2 = time.time()
         print('文件算法时间：', t2 - t1)
         result = {'status': True, 'message': '算法执行成功'}
 
     except Exception as e:
-        print(e, "跑算法出错！")
+        print(e, "单个文件跑算法出错！")
     return HttpResponse(json.dumps(result))
 
 
@@ -348,10 +346,10 @@ def single_dataset_list(request, dataset_id):
     """
     data_type = "data_set"
     version_obj = models.Version.objects.values('version').order_by('-id')
-    data_time_condition_obj = \
-    models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
+    data_time_condition_obj = models.DataSetCondition.objects.filter(id=dataset_id).values('time_and_id', 'data_set_id')[0]
     data_set_id = eval(data_time_condition_obj['data_set_id'])
     data_id_list = true_data_id_list(data_set_id)
+    print('data_id_list', data_id_list)
     count = len(data_id_list)
     # 从session中获取selected_version
     selected_version = request.session.get('selected_version')
@@ -391,9 +389,11 @@ def true_data_id_list(id_list):
     :param id_list: 要查询的数据id列表
     :return:
     """
-    id_list = list_to_str_tuple(id_list)
+    # id_list = list(list_to_str_tuple(id_list))
+    # print(id_list)
     data_id_list = []
-    data_id_list_obj = models.DataFile.objects.raw("select nid from thickness_datafile where nid in %s" % id_list)
+    # data_id_list_obj = models.DataFile.objects.raw("select nid from thickness_datafile where nid in %s" % id_list)
+    data_id_list_obj = models.DataFile.objects.filter(nid__in=id_list)
     for i in data_id_list_obj:
         data_id_list.append(i.nid)
     return data_id_list
@@ -431,19 +431,20 @@ def handle_alg_process(data_id_list, version_list, only_run_alg):
     :param version_list: 选择的版本列表
     :return:
     """
-    data_id_list = list_to_str_tuple(data_id_list)
+    # data_id_list = list_to_str_tuple(data_id_list)
     for version_item in version_list:
         # print('version_item', version_item)
         update_data_id_set = set()
         version_id = models.Version.objects.values('id').get(version=version_item)['id']
-        data_id_list_obj = models.VersionToThcikness.objects.raw(
-            "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
-            data_id_list, version_id))
+        # data_id_list_obj = models.VersionToThcikness.objects.raw(
+        #     "select id, data_id_id, run_alg_thickness from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+        #     data_id_list, version_id))
+        data_id_list_obj = models.VersionToThcikness.objects.filter(data_id_id__in=data_id_list, version_id=version_id).order_by('data_id_id')
         print('data_id_list_obj', data_id_list_obj)
         # 用于update
         update_devation(data_id_list_obj, version_item, version_id, update_data_id_set, only_run_alg)
         # 需要创建的数据id列表
-        create_data_id_set = set(eval(data_id_list)) - update_data_id_set
+        create_data_id_set = set(data_id_list) - update_data_id_set
         print('create_data_id_set', create_data_id_set)
         # 用于create
         create_run_alg_thickness_and_devation(create_data_id_set, version_item, version_id)
@@ -853,11 +854,11 @@ def deviation_rate_ajax(request, nid, data_type):
         selected_version_list = request.POST.get('version').split(',')
         if data_type == "data_set":
             data_id_list = eval(models.DataSetCondition.objects.values('data_set_id').get(id=nid)['data_set_id'])
-            data_id_list = list_to_str_tuple(data_id_list)
+            # data_id_list = list_to_str_tuple(data_id_list)
         elif data_type == "file":
             data_id_list = models.DataFile.objects.values('nid').filter(file_name_id=nid)
             data_id_list = [i['nid'] for i in data_id_list]
-            data_id_list = list_to_str_tuple(data_id_list)
+            # data_id_list = list_to_str_tuple(data_id_list)
 
         result = handle_deviation_rate(data_id_list, selected_version_list, nid)
 
@@ -882,9 +883,10 @@ def handle_deviation_rate(data_id_list, selected_version_list, nid):
         data_id_and_devation_dict = {}
         version_id = models.Version.objects.values('id').get(version=version_item)['id']
         try:  # 批量查找
-            dataset_id_list_obj = models.VersionToThcikness.objects.raw(
-                "select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
-                    data_id_list, version_id))
+            # dataset_id_list_obj = models.VersionToThcikness.objects.raw(
+            #     "select id, data_id_id, deviation from thickness_versiontothcikness where data_id_id in %s and version_id=%s order by data_id_id" % (
+            #         data_id_list, version_id))
+            dataset_id_list_obj = models.VersionToThcikness.objects.filter(data_id_id__in=data_id_list, version_id=version_id).order_by('data_id_id')
             for data_item in dataset_id_list_obj:
                 data_id = data_item.data_id_id
                 deviation = data_item.deviation
