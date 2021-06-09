@@ -1,4 +1,4 @@
-Django==2.2.2
+Django==2.2.22
 APScheduler==3.6.0
 Pillow==6.2.1
 psycopg2==2.7.4
